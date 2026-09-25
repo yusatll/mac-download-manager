@@ -33,6 +33,8 @@ final class Connection: NSObject, URLSessionDataDelegate, @unchecked Sendable {
     private let stopReason = OSAllocatedUnfairLock<ConnectionResult?>(initialState: nil)
     private var session: URLSession!
     private var task: URLSessionDataTask!
+    /// When the throttled task may read again. Only touched on `queue` (the delegate queue).
+    private var resumeAt: DispatchTime?
 
     init(request: URLRequest, timeout: TimeInterval, limiters: [SpeedLimiter], handlers: ConnectionHandlers) {
         self.handlers = handlers
@@ -77,19 +79,31 @@ final class Connection: NSObject, URLSessionDataDelegate, @unchecked Sendable {
 
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
         guard stopReason.withLock({ $0 }) == nil else { return }
+        // Every chunk is charged, including the one that finishes a segment; its debt is paid by the next reads.
+        let pause = limiters.map { $0.consume(data.count) }.max() ?? 0
         switch handlers.onData(data) {
         case .more:
-            let pause = limiters.map { $0.consume(data.count) }.max() ?? 0
-            if pause > 0.005 {
-                dataTask.suspend()
-                queue.asyncAfter(deadline: .now() + pause) { dataTask.resume() }
-            }
+            if pause > 0.005 { throttle(dataTask, for: pause) }
         case .done:
             markStopped(.segmentDone)
             dataTask.cancel()
         case .failed(let reason):
             markStopped(.fatal(reason))
             dataTask.cancel()
+        }
+    }
+
+    /// Suspends until `pause` has passed. A suspended task can still deliver chunks that were already queued;
+    /// those extend the pause instead of scheduling an earlier resume.
+    private func throttle(_ dataTask: URLSessionDataTask, for pause: TimeInterval) {
+        let target = DispatchTime.now() + pause
+        if let current = resumeAt, current >= target { return }
+        if resumeAt == nil { dataTask.suspend() }
+        resumeAt = target
+        queue.asyncAfter(deadline: target) { [weak self] in
+            guard let self, self.resumeAt == target else { return }
+            self.resumeAt = nil
+            dataTask.resume()
         }
     }
 

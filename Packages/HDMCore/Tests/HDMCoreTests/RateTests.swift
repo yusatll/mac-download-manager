@@ -18,10 +18,12 @@ final class FakeClock: Sendable {
     @Test func tokenBucketComputesPause() {
         let clock = FakeClock()
         let limiter = SpeedLimiter(bytesPerSecond: 1000, now: { clock.now })
-        #expect(limiter.consume(1000) == 0)
+        // Burst capacity is a quarter second of traffic, so short transfers cannot slip past the limit.
+        #expect(limiter.consume(250) == 0)
         #expect(abs(limiter.consume(500) - 0.5) < 0.0001)
         clock.advance(1)
-        #expect(limiter.consume(400) == 0)
+        #expect(limiter.consume(250) == 0)
+        #expect(abs(limiter.consume(250) - 0.25) < 0.0001)
         limiter.setRate(0)
         #expect(limiter.consume(1_000_000) == 0)
     }

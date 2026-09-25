@@ -1,17 +1,19 @@
 import Foundation
 
-/// Token bucket shared by connections (spec §5.7). Capacity equals one second of traffic.
+/// Token bucket shared by connections (spec §5.7). The burst capacity is a quarter second of traffic:
+/// a larger bucket lets short downloads and segment tails run past the limit.
 public final class SpeedLimiter: @unchecked Sendable {
     private let lock = NSLock()
     private let now: @Sendable () -> TimeInterval
     private var rate: Int64
     private var tokens: Double
     private var last: TimeInterval
+    private static let burstSeconds = 0.25
 
     public init(bytesPerSecond: Int64, now: @escaping @Sendable () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }) {
         self.now = now
         self.rate = max(0, bytesPerSecond)
-        self.tokens = Double(max(0, bytesPerSecond))
+        self.tokens = Double(max(0, bytesPerSecond)) * Self.burstSeconds
         self.last = now()
     }
 
@@ -19,7 +21,7 @@ public final class SpeedLimiter: @unchecked Sendable {
         lock.withLock {
             refill()
             rate = max(0, bytesPerSecond)
-            tokens = min(tokens, Double(rate))
+            tokens = min(tokens, Double(rate) * Self.burstSeconds)
         }
     }
 
@@ -35,7 +37,7 @@ public final class SpeedLimiter: @unchecked Sendable {
 
     private func refill() {
         let t = now()
-        tokens = min(Double(rate), tokens + (t - last) * Double(rate))
+        tokens = min(Double(rate) * Self.burstSeconds, tokens + (t - last) * Double(rate))
         last = t
     }
 }
