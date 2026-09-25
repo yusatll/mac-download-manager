@@ -1208,6 +1208,16 @@
         }
       }
     },
+    "Start Over": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Baştan Başlat"
+          }
+        }
+      }
+    },
     "Start Queue": {
       "localizations": {
         "tr": {
@@ -1294,6 +1304,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sistem"
+          }
+        }
+      }
+    },
+    "The file has changed on the server": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dosya sunucuda değişmiş"
           }
         }
       }
@@ -1574,6 +1594,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "“%@” zaten var."
+          }
+        }
+      }
+    },
+    "“%@” can't be resumed. Start the download over from the beginning?": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” devam ettirilemiyor. İndirme baştan başlatılsın mı?"
           }
         }
       }

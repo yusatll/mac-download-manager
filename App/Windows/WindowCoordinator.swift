@@ -22,9 +22,10 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
         }
         let root = content().environment(model).environment(model.manager)
         let controller = NSHostingController(rootView: root)
-        // Size the window once from the SwiftUI content. Letting the window follow `preferredContentSize`
-        // live crashes AppKit ("needs another Update Constraints pass") when content changes during layout.
-        controller.sizingOptions = []
+        // Report the SwiftUI ideal size (so fittingSize is meaningful) but never let AppKit resize the window
+        // from it: following `preferredContentSize` live crashes AppKit ("needs another Update Constraints
+        // pass") when content changes during layout. FitWindowToContent resizes explicitly instead.
+        controller.sizingOptions = [.intrinsicContentSize]
         let window = NSWindow(contentViewController: controller)
         window.title = title
         window.styleMask = [.titled, .closable, .miniaturizable]

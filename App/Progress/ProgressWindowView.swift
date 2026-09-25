@@ -49,7 +49,7 @@ struct ProgressWindowView: View {
                 if item.status.isRunning || item.status == .queued {
                     Button("Pause") { model.stop([id]) }
                 } else if item.status.canResume {
-                    Button("Resume") { manager.resume([id]) }
+                    Button("Resume") { model.resume([id]) }
                 }
                 Button("Cancel") {
                     if item.status.isRunning || item.status == .queued { model.stop([id]) }

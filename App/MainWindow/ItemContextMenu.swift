@@ -15,7 +15,7 @@ struct ItemContextMenu: View {
             Button("Show in Finder") { model.reveal(single) }
             Divider()
         }
-        Button("Resume") { manager.resume(ids) }
+        Button("Resume") { model.resume(ids) }
             .disabled(!items.contains { $0.status.canResume })
         Button("Stop") { model.stop(ids) }
             .disabled(!items.contains { $0.status.isRunning || $0.status == .queued })

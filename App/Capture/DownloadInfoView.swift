@@ -76,6 +76,7 @@ struct DownloadInfoView: View {
         }
         .padding(20)
         .frame(width: 640)
+        .background(FitWindowToContent(trigger: probeError ?? ""))
         .onAppear(perform: prepare)
         .onChange(of: category) { _, new in
             if !userChoseFolder { directory = model.settings.settings.folder(for: new) }

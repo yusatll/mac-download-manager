@@ -27,6 +27,7 @@ struct AddURLView: View {
         }
         .padding(20)
         .frame(width: 520)
+        .background(FitWindowToContent(trigger: useAuthorization))
     }
 
     private var parsedURL: URL? {

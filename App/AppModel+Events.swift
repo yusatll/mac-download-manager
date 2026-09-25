@@ -16,6 +16,8 @@ extension AppModel {
         case .failed(let id):
             guard let item = manager.item(id), case .failed(let reason) = item.status else { return }
             notifier.post(title: String(localized: "Download failed"), body: item.fileName + " — " + reason.message)
+            if reason == .serverFileChanged { askToRestart(item) }
+            if reason == .authRequired { askForCredentials(item) }
         case .needsRefresh(let id):
             guard let item = manager.item(id) else { return }
             notifier.post(title: String(localized: "Link expired"),

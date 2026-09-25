@@ -11,7 +11,7 @@ struct MainToolbar: ToolbarContent {
     var body: some ToolbarContent {
         ToolbarItemGroup {
             Button { model.windows.showAddURL() } label: { Label("Add URL", systemImage: "plus.circle") }
-            Button { manager.resume(selection) } label: { Label("Resume", systemImage: "play.fill") }
+            Button { model.resume(selection) } label: { Label("Resume", systemImage: "play.fill") }
                 .disabled(!selected.contains { $0.status.canResume })
             Button { model.stop(selection) } label: { Label("Stop", systemImage: "stop.fill") }
                 .disabled(!selected.contains { $0.status.isRunning || $0.status == .queued })
