@@ -8,6 +8,7 @@ extension DownloadItem {
 
 struct DownloadTable: View {
     @Environment(DownloadManager.self) private var manager
+    @Environment(AppModel.self) private var model
     let filter: SidebarSelection
     let search: String
     @Binding var selection: Set<UUID>
@@ -52,6 +53,8 @@ struct DownloadTable: View {
         }
         .contextMenu(forSelectionType: UUID.self) { ids in
             ItemContextMenu(ids: ids)
+        } primaryAction: { ids in
+            model.primaryAction(for: ids)
         }
     }
 }

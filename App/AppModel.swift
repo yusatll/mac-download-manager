@@ -20,6 +20,7 @@ final class AppModel {
     }
 
     func start() {
+        manager.onEvent = { [weak self] event in self?.handle(event) }
         clipboard = ClipboardMonitor(
             isEnabled: { [unowned self] in settings.settings.clipboardMonitoring },
             shouldCapture: { [unowned self] url in settings.settings.shouldCapture(fileName: url.lastPathComponent) },

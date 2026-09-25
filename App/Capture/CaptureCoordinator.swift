@@ -65,8 +65,9 @@ final class CaptureCoordinator {
         let category = s.categoryResolver.category(forFileName: name)
         let directory = s.folder(for: category)
         let finalName = s.conflictPolicy == .overwrite ? name : FilenameResolver.uniqueName(name, in: directory)
-        model.manager.add(NewDownload(url: pending.url, fileName: finalName, directory: directory, category: category,
+        let id = model.manager.add(NewDownload(url: pending.url, fileName: finalName, directory: directory, category: category,
                                       headers: pending.headers, pageURL: pending.pageURL, referrer: pending.referrer,
                                       totalBytes: probe?.totalBytes ?? pending.totalBytes))
+        if s.showProgressWindow { model.windows.showProgress(id) }
     }
 }

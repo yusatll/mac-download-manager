@@ -15,6 +15,21 @@ struct WindowAccessor: NSViewRepresentable {
     }
 }
 
+/// Resizes an AppKit-hosted window to its SwiftUI content when `trigger` changes. Runs after the
+/// current layout pass, so it avoids the constraint-loop crash that live `preferredContentSize` caused.
+struct FitWindowToContent<Trigger: Equatable>: View {
+    let trigger: Trigger
+    var body: some View {
+        WindowAccessor { window in
+            guard let view = window.contentViewController?.view else { return }
+            let size = view.fittingSize
+            if window.contentLayoutRect.size != size { window.setContentSize(size) }
+        }
+        .id(AnyHashable(String(describing: trigger)))
+        .frame(width: 0, height: 0)
+    }
+}
+
 /// Keeps the hosting window's title in sync (used by AppKit-hosted windows).
 struct WindowTitle: View {
     let title: String

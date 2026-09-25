@@ -164,9 +164,10 @@ struct DownloadInfoView: View {
             }
         }
         if rememberFolder, userChoseFolder { model.settings.settings.categoryFolders[category] = directory }
-        _ = model.manager.add(NewDownload(url: pending.url, fileName: name, directory: directory, category: category,
+        let id = model.manager.add(NewDownload(url: pending.url, fileName: name, directory: directory, category: category,
                                           headers: pending.headers, pageURL: pending.pageURL, referrer: pending.referrer,
                                           totalBytes: size, description: note, autoStart: start))
+        if start && model.settings.settings.showProgressWindow { model.windows.showProgress(id) }
         close()
     }
 }

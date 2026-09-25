@@ -66,4 +66,10 @@ extension AppModel {
         alert.addButton(withTitle: String(localized: "OK"))
         alert.runModal()
     }
+
+    /// Double-click: open finished files, show the progress window for everything else.
+    func primaryAction(for ids: Set<UUID>) {
+        guard ids.count == 1, let id = ids.first, let item = manager.item(id) else { return }
+        if item.status == .completed { open(item) } else { windows.showProgress(id) }
+    }
 }

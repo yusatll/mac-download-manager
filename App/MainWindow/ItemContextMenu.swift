@@ -26,5 +26,9 @@ struct ItemContextMenu: View {
         Button("Add to Queue") { manager.addToQueue(ids) }
         Divider()
         Button("Delete…") { model.confirmDelete(ids) }
+        if let single {
+            Divider()
+            Button("Properties…") { model.windows.showProgress(single.id) }
+        }
     }
 }

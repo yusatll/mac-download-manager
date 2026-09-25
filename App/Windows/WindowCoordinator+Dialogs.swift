@@ -14,4 +14,18 @@ extension WindowCoordinator {
             DownloadInfoView(pending: pending, close: { [weak self] in self?.close(key: key) })
         }
     }
+
+    func showProgress(_ id: UUID) {
+        show(key: Self.progressKey(id), title: model.manager.item(id)?.fileName ?? "") {
+            ProgressWindowView(id: id)
+        }
+    }
+
+    func showCompletion(_ id: UUID) {
+        guard let item = model.manager.item(id) else { return }
+        let key = "done-\(id.uuidString)"
+        show(key: key, title: String(localized: "Download complete")) {
+            CompletionView(item: item, close: { [weak self] in self?.close(key: key) })
+        }
+    }
 }
