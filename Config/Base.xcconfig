@@ -1,0 +1,4 @@
+// Shared build settings. Put your own DEVELOPMENT_TEAM in Local.xcconfig (never committed).
+CODE_SIGN_STYLE = Automatic
+DEVELOPMENT_TEAM =
+#include? "../Local.xcconfig"
