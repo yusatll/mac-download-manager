@@ -22,5 +22,14 @@ struct HizDownloadManagerApp: App {
                 .environment(model)
                 .environment(model.manager)
         }
+
+        MenuBarExtra(isInserted: Binding(get: { model.settings.settings.keepInMenuBar },
+                                         set: { model.settings.settings.keepInMenuBar = $0 })) {
+            MenuBarContent()
+                .environment(model)
+                .environment(model.manager)
+        } label: {
+            MenuBarLabel(manager: model.manager)
+        }
     }
 }
