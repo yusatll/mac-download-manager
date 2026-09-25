@@ -62,6 +62,14 @@ import HDMTestSupport
         #expect(result.totalBytes == 1234 && !result.resumable)
     }
 
+    @Test func probeTreatsUnsatisfiableEmptyFileAsEmpty() async throws {   // nginx/S3: 416 bytes */0
+        let server = try TestHTTPServer(.init(body: Data()))
+        try await server.start()
+        defer { server.stop() }
+        let result = try await HTTPProbe.probe(url: server.url)
+        #expect(result.isEmptyFile && result.totalBytes == 0 && !result.resumable)
+    }
+
     @Test func probeThrowsOnHTTPError() async throws {
         var config = TestHTTPServer.Config(body: Data(count: 1))
         config.statusSequence = [404]

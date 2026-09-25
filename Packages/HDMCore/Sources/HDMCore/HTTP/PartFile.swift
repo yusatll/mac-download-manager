@@ -34,6 +34,14 @@ public final class PartFile: @unchecked Sendable {
         }
     }
 
+    /// Sets the exact file length (drops stale bytes left by an earlier, longer attempt).
+    public func truncate(to size: Int64) throws {
+        try lock.withLock {
+            guard fd >= 0 else { throw PartFileError.closed }
+            if ftruncate(fd, off_t(size)) != 0 { throw PartFileError.io(errno) }
+        }
+    }
+
     public func write(_ data: Data, at offset: Int64) throws {
         try lock.withLock {
             guard fd >= 0 else { throw PartFileError.closed }

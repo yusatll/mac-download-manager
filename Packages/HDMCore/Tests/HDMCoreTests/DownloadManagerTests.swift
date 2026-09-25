@@ -137,3 +137,108 @@ import HDMTestSupport
         try await waitUntil { manager.item(id)?.status == .completed }
     }
 }
+
+/// Regression tests from the Phase 1 whole-branch review.
+@MainActor @Suite(.serialized) struct DownloadManagerReviewTests {
+    func serve(_ body: Data, _ configure: (inout TestHTTPServer.Config) -> Void = { _ in }) async throws -> TestHTTPServer {
+        var config = TestHTTPServer.Config(body: body)
+        configure(&config)
+        let server = try TestHTTPServer(config)
+        try await server.start()
+        return server
+    }
+
+    func makeManager(dir: URL, configure: (inout AppSettings) -> Void = { _ in }) -> DownloadManager {
+        let settings = SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        var s = settings.settings
+        s.baseFolder = dir
+        configure(&s)
+        settings.settings = s
+        return DownloadManager(store: DownloadStore(fileURL: dir.appendingPathComponent("downloads.json")),
+                               settings: settings, minSegment: 64 * 1024, backoff: fastBackoff)
+    }
+
+    func isTerminal(_ status: DownloadStatus?) -> Bool {
+        switch status { case .completed?, .failed?: true; default: false }
+    }
+
+    @Test func sameNameItemsNeverShareAPartFile() async throws {
+        let bodyA = TestData.random(count: 2 * 1024 * 1024, seed: 11)
+        let bodyB = TestData.random(count: 2 * 1024 * 1024, seed: 22)
+        let a = try await serve(bodyA) { $0.bytesPerSecondPerConnection = 512 * 1024 }
+        let b = try await serve(bodyB) { $0.bytesPerSecondPerConnection = 512 * 1024 }
+        defer { a.stop(); b.stop() }
+        let dir = tempDirectory()
+        let manager = makeManager(dir: dir)
+        let idA = manager.add(NewDownload(url: a.url, fileName: "setup.zip", directory: dir, category: .general, autoStart: false))
+        let idB = manager.add(NewDownload(url: b.url, fileName: "setup.zip", directory: dir, category: .general, autoStart: false))
+        #expect(manager.item(idA)?.fileName != manager.item(idB)?.fileName)
+        manager.startQueue()
+        try await waitUntil(timeout: 20) { isTerminal(manager.item(idA)?.status) && isTerminal(manager.item(idB)?.status) }
+        let itemA = try #require(manager.item(idA)), itemB = try #require(manager.item(idB))
+        #expect(itemA.status == .completed && itemB.status == .completed)
+        #expect(try TestData.sha256(fileAt: itemA.fileURL) == TestData.sha256(bodyA))
+        #expect(try TestData.sha256(fileAt: itemB.fileURL) == TestData.sha256(bodyB))
+    }
+
+    @Test func queueStopsOnceItsItemsHaveStarted() async throws {
+        let server = try await serve(TestData.random(count: 50_000))
+        defer { server.stop() }
+        let dir = tempDirectory()
+        let manager = makeManager(dir: dir)
+        let first = manager.add(NewDownload(url: server.url, fileName: "one.bin", directory: dir, category: .general, autoStart: false))
+        manager.startQueue()
+        try await waitUntil { manager.item(first)?.status == .completed }
+        #expect(!manager.queueRunning)
+        let later = manager.add(NewDownload(url: server.url, fileName: "two.bin", directory: dir, category: .general, autoStart: false))
+        try await Task.sleep(nanoseconds: 500_000_000)
+        #expect(manager.item(later)?.status == .queued)
+    }
+
+    @Test func overwriteNeverReplacesADirectory() async throws {
+        let body = TestData.random(count: 20_000)
+        let server = try await serve(body)
+        defer { server.stop() }
+        let dir = tempDirectory()
+        let folder = dir.appendingPathComponent("Documents", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try Data("keep".utf8).write(to: folder.appendingPathComponent("important.txt"))
+        let manager = makeManager(dir: dir) { $0.conflictPolicy = .overwrite }
+        let id = manager.add(NewDownload(url: server.url, fileName: "Documents", directory: dir, category: .general))
+        try await waitUntil { isTerminal(manager.item(id)?.status) }
+        let item = try #require(manager.item(id))
+        #expect(item.status == .completed)
+        #expect(item.fileName == "Documents (2)")
+        #expect(try Data(contentsOf: folder.appendingPathComponent("important.txt")) == Data("keep".utf8))
+    }
+
+    @Test func pauseRacingRedownloadDoesNotClobberTheNewRun() async throws {
+        let server = try await serve(TestData.random(count: 2 * 1024 * 1024)) { $0.bytesPerSecondPerConnection = 128 * 1024 }
+        defer { server.stop() }
+        let dir = tempDirectory()
+        let manager = makeManager(dir: dir)
+        let id = manager.add(NewDownload(url: server.url, fileName: "race.bin", directory: dir, category: .general))
+        try await waitUntil { manager.item(id)?.status == .downloading }
+        let pausing = Task { await manager.pause([id]) }
+        await Task.yield()                      // let pause() reach its await on the old run
+        manager.redownload(id)                  // user clicks Redownload meanwhile
+        await pausing.value
+        try await Task.sleep(nanoseconds: 300_000_000)
+        #expect(manager.item(id)?.status.isRunning == true, "status: \(String(describing: manager.item(id)?.status))")
+        await manager.pauseAll()
+    }
+
+    @Test func credentialsCanBeAddedAfterAuthFailure() async throws {   // spec §5.5 401 → ask for user/password
+        let body = TestData.random(count: 30_000)
+        let server = try await serve(body) { $0.statusSequence = [401] }
+        defer { server.stop() }
+        let dir = tempDirectory()
+        let manager = makeManager(dir: dir)
+        let id = manager.add(NewDownload(url: server.url, fileName: "auth.bin", directory: dir, category: .general))
+        try await waitUntil { manager.item(id)?.status == .failed(.authRequired) }
+        manager.setHeader(id, name: "Authorization", value: "Basic dTpw")
+        manager.resume([id])
+        try await waitUntil { manager.item(id)?.status == .completed }
+        #expect(server.requests.last?.headers["authorization"] == "Basic dTpw")
+    }
+}

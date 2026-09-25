@@ -38,9 +38,19 @@ public enum FilenameResolver {
             return decoded
         }
         if let plain = params["filename"], !plain.isEmpty {
-            return plain.removingPercentEncoding ?? plain
+            let decoded = plain.removingPercentEncoding ?? plain
+            return repairingLatin1Mojibake(decoded)
         }
         return nil
+    }
+
+    /// Header values are decoded as Latin-1, so a raw UTF-8 name ("rapor ü") arrives as "rapor Ã¼".
+    /// If every character fits in one byte and those bytes are valid UTF-8, use the UTF-8 reading.
+    static func repairingLatin1Mojibake(_ name: String) -> String {
+        let scalars = name.unicodeScalars
+        guard scalars.contains(where: { $0.value >= 0x80 }), scalars.allSatisfy({ $0.value <= 0xFF }) else { return name }
+        let bytes = scalars.map { UInt8($0.value) }
+        return String(bytes: bytes, encoding: .utf8) ?? name
     }
 
     public static func sanitize(_ name: String) -> String {
@@ -62,10 +72,14 @@ public enum FilenameResolver {
     /// `name`, or `name (2)`, `name (3)` … whichever has neither a file nor a `.hdmpart` in `directory`.
     public static func uniqueName(_ name: String, in directory: URL) -> String {
         let fm = FileManager.default
-        func taken(_ candidate: String) -> Bool {
+        return uniqueName(name) { candidate in
             let path = directory.appendingPathComponent(candidate).path
             return fm.fileExists(atPath: path) || fm.fileExists(atPath: path + ".hdmpart")
         }
+    }
+
+    /// `name`, or `name (2)`, `name (3)` … — the first candidate for which `taken` is false.
+    public static func uniqueName(_ name: String, isTaken taken: (String) -> Bool) -> String {
         guard taken(name) else { return name }
         let ext = (name as NSString).pathExtension
         let base = (name as NSString).deletingPathExtension

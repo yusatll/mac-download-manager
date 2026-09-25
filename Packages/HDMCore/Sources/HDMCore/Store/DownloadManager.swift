@@ -56,12 +56,15 @@ public final class DownloadManager {
     private struct Running {
         let download: HTTPDownload
         let limiter: SpeedLimiter
+        /// Identifies this run, so late events or a pause of an older run never touch a newer one.
+        let generation: Int
         var meter = SpeedMeter()
         var task: Task<Void, Never>?
     }
 
     @ObservationIgnored private let store: DownloadStore
     @ObservationIgnored private var running: [UUID: Running] = [:]
+    @ObservationIgnored private var nextGeneration = 0
     @ObservationIgnored private let globalLimiter = SpeedLimiter(bytesPerSecond: 0)
     @ObservationIgnored private var saveTask: Task<Void, Never>?
     @ObservationIgnored private let pathMonitor = NWPathMonitor()
@@ -113,7 +116,8 @@ public final class DownloadManager {
 
     @discardableResult
     public func add(_ new: NewDownload) -> UUID {
-        let item = DownloadItem(url: new.url, fileName: FilenameResolver.sanitize(new.fileName), saveDirectory: new.directory,
+        let item = DownloadItem(url: new.url, fileName: reserveName(FilenameResolver.sanitize(new.fileName), in: new.directory),
+                                saveDirectory: new.directory,
                                 category: new.category, headers: new.headers, pageURL: new.pageURL, referrer: new.referrer,
                                 totalBytes: new.totalBytes, userDescription: new.description, autoStart: new.autoStart)
         items.append(item)
@@ -151,6 +155,8 @@ public final class DownloadManager {
                 run.task?.cancel()
                 live[id] = nil
                 let segments = await run.download.pause()
+                // Redownload/refresh may have started a new run while we waited; leave that run alone.
+                guard running[id] == nil, item(id)?.status.isRunning == true else { continue }
                 update(id) { item in
                     item.segments = segments
                     item.receivedBytes = segments.reduce(0) { $0 + $1.received }
@@ -231,6 +237,12 @@ public final class DownloadManager {
         scheduleSave()
     }
 
+    /// Sets or replaces one request header (e.g. `Authorization` after a 401) for the next attempt.
+    public func setHeader(_ id: UUID, name: String, value: String) {
+        update(id) { $0.headers[name] = value }
+        scheduleSave()
+    }
+
     public func markAwaitingRefresh(_ id: UUID) {
         update(id) { $0.awaitingRefresh = true }
         scheduleSave()
@@ -260,6 +272,17 @@ public final class DownloadManager {
         do { try store.save(items) } catch { NSLog("HDM: could not save downloads: \(error)") }
     }
 
+    /// Two unfinished items with the same name would share one `.hdmpart`; give the newcomer `name (2)`.
+    /// An existing *finished* file is left to the conflict policy at completion.
+    private func reserveName(_ name: String, in directory: URL) -> String {
+        let fm = FileManager.default
+        let dir = directory.standardizedFileURL
+        return FilenameResolver.uniqueName(name) { candidate in
+            items.contains { $0.status != .completed && $0.fileName == candidate && $0.saveDirectory.standardizedFileURL == dir }
+                || fm.fileExists(atPath: dir.appendingPathComponent(candidate).path + ".hdmpart")
+        }
+    }
+
     // MARK: Scheduling
 
     private func schedule() {
@@ -268,6 +291,9 @@ public final class DownloadManager {
             let item = items[index]
             guard item.status == .queued, item.autoStart || queueRunning, running[item.id] == nil else { continue }
             start(index)
+        }
+        if queueRunning, !items.contains(where: { $0.status == .queued && !$0.autoStart }) {
+            queueRunning = false   // every queued item has started; later "Download Later" items wait again
         }
     }
 
@@ -297,17 +323,19 @@ public final class DownloadManager {
             items[index].receivedBytes = 0
         }
         let id = item.id
-        var run = Running(download: download, limiter: limiter)
+        nextGeneration += 1
+        let generation = nextGeneration
+        var run = Running(download: download, limiter: limiter, generation: generation)
         run.task = Task { [weak self] in
-            for await event in download.events { self?.handle(event, for: id) }
+            for await event in download.events { self?.handle(event, for: id, generation: generation) }
         }
         running[id] = run
         onEvent?(.started(id))
         Task { await download.start() }
     }
 
-    private func handle(_ event: DownloadEvent, for id: UUID) {
-        guard running[id] != nil, let index = items.firstIndex(where: { $0.id == id }) else { return }
+    private func handle(_ event: DownloadEvent, for id: UUID, generation: Int) {
+        guard running[id]?.generation == generation, let index = items.firstIndex(where: { $0.id == id }) else { return }
         switch event {
         case .probed(let probe):
             items[index].totalBytes = probe.totalBytes
@@ -356,9 +384,11 @@ public final class DownloadManager {
         var item = items[index]
         let fm = FileManager.default
         let part = item.partURL   // captured before a rename changes the derived path
-        if fm.fileExists(atPath: item.fileURL.path) {
-            if settings.settings.conflictPolicy == .overwrite {
-                try? fm.removeItem(at: item.fileURL)
+        var isDirectory: ObjCBool = false
+        if fm.fileExists(atPath: item.fileURL.path, isDirectory: &isDirectory) {
+            if settings.settings.conflictPolicy == .overwrite, !isDirectory.boolValue,
+               (try? fm.trashItem(at: item.fileURL, resultingItemURL: nil)) != nil {
+                // replaced: the old file is in the Trash, not deleted
             } else {
                 item.fileName = FilenameResolver.uniqueName(item.fileName, in: item.saveDirectory)
             }

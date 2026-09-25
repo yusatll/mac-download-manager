@@ -75,6 +75,7 @@ public actor HTTPDownload {
     private var table: SegmentTable?
     private var connections: [Int: Connection] = [:]
     private var slotSegment: [Int: Int] = [:]
+    private var slotStart: [Int: Int64] = [:]
     private var receiving: Set<Int> = []
     private var retryCounted: Set<Int> = []
     private var nextSlot = 1
@@ -210,6 +211,7 @@ public actor HTTPDownload {
         let connection = Connection(request: urlRequest, timeout: request.timeout, limiters: limiters, handlers: handlers)
         connections[slot] = connection
         slotSegment[slot] = index
+        slotStart[slot] = start
         connection.start()
         return slot
     }
@@ -273,6 +275,14 @@ public actor HTTPDownload {
             stopForRefresh(status)
             return false
         case 416:
+            if isProbe, ProbeResult(response: response).isEmptyFile {
+                probed = true
+                resumable = false
+                total = 0
+                table.replace(with: [Segment(start: 0, end: 0)])
+                continuation.yield(.probed(ProbeResult(response: response)))
+                return false   // nothing to transfer; connectionFinished sees an all-complete table and finishes
+            }
             fail(.serverFileChanged)
             return false
         case 429, 503:
@@ -294,12 +304,16 @@ public actor HTTPDownload {
     private func connectionFinished(slot: Int, result: ConnectionResult) {
         guard let index = slotSegment.removeValue(forKey: slot) else { return }
         connections.removeValue(forKey: slot)
-        receiving.remove(slot)
+        let hadResponse = receiving.remove(slot) != nil
+        let startedAt = slotStart.removeValue(forKey: slot)
         let countsAsFailure = retryCounted.remove(slot) != nil
         if slot == probeSlot { probeSlot = nil }
         table?.release(index)
         defer { if connections.isEmpty { drain() } }
         guard state == .running, let table else { return }
+
+        // Spec §5.5: a connection that delivered data resets its segment's retry counter.
+        if let startedAt, table.segment(index).cursor > startedAt { failures[index] = 0 }
 
         switch result {
         case .segmentDone:
@@ -323,6 +337,11 @@ public actor HTTPDownload {
             fail(reason)
             return
         case .failed(let message):
+            if !hadResponse, !receiving.isEmpty {
+                // Spec §5.3.5: the server refused an extra connection while others work; use fewer connections.
+                maxConnections = max(1, receiving.count)
+                break
+            }
             registerFailure(index, message: message)
             return
         }
@@ -356,8 +375,13 @@ public actor HTTPDownload {
 
     private func finish() {
         guard state == .running else { return }
+        let finalTotal = total ?? table?.receivedBytes ?? 0
+        do { try table?.truncateFile(to: finalTotal) } catch {
+            fail(.fileSystem(error.localizedDescription))
+            return
+        }
         stopEverything()
-        continuation.yield(.finished(totalBytes: total ?? table?.receivedBytes ?? 0))
+        continuation.yield(.finished(totalBytes: finalTotal))
         continuation.finish()
     }
 

@@ -225,3 +225,64 @@ func collect(_ download: HTTPDownload) async -> [DownloadEvent] {
         guard case .network = events.last?.failure else { Issue.record("expected network failure, got \(events.last as Any)"); return }
     }
 }
+
+/// Regression tests from the Phase 1 whole-branch review.
+@Suite(.serialized) struct HTTPDownloadReviewTests {
+    func serve(_ body: Data, _ configure: (inout TestHTTPServer.Config) -> Void = { _ in }) async throws -> TestHTTPServer {
+        var config = TestHTTPServer.Config(body: body)
+        configure(&config)
+        let server = try TestHTTPServer(config)
+        try await server.start()
+        return server
+    }
+
+    func download(_ server: TestHTTPServer, part: URL, connections: Int = 8, retries: Int = 10,
+                  backoff: @escaping @Sendable (Int) -> TimeInterval = fastBackoff) -> HTTPDownload {
+        HTTPDownload(request: DownloadRequest(url: server.url, partURL: part, maxConnections: connections,
+                                              retryLimit: retries, timeout: 10, minSegment: 64 * 1024), backoff: backoff)
+    }
+
+    @Test func retryCounterResetsWhenDataArrives() async throws {   // spec §5.5
+        let body = TestData.random(count: 1024 * 1024)
+        let server = try await serve(body) { $0.dropEveryAfterBytes = 100_000 }
+        defer { server.stop() }
+        let part = tempDirectory().appendingPathComponent("d.hdmpart")
+        let dl = download(server, part: part, connections: 1, retries: 5)
+        await dl.start()
+        let events = await collect(dl)
+        #expect(events.last?.isFinished == true, "last event: \(String(describing: events.last))")
+        #expect(try TestData.sha256(fileAt: part) == TestData.sha256(body))
+    }
+
+    @Test func completesWhenServerRefusesExtraTCPConnections() async throws {   // spec §5.3.5
+        let body = TestData.random(count: 1024 * 1024)
+        let server = try await serve(body) { $0.refuseBeyond = 2; $0.bytesPerSecondPerConnection = 1024 * 1024 }
+        defer { server.stop() }
+        let part = tempDirectory().appendingPathComponent("r.hdmpart")
+        let dl = download(server, part: part)
+        await dl.start()
+        let events = await collect(dl)
+        #expect(events.last?.isFinished == true, "last event: \(String(describing: events.last))")
+        #expect(try TestData.sha256(fileAt: part) == TestData.sha256(body))
+    }
+
+    @Test func nonResumableRestartLeavesNoTrailingBytes() async throws {
+        let first = TestData.random(count: 300 * 1024, seed: 1)
+        let second = TestData.random(count: 100 * 1024, seed: 2)
+        let server = try await serve(first) {
+            $0.supportsRange = false
+            $0.dropOnceAfterBytes = 200 * 1024
+            $0.bytesPerSecondPerConnection = 1024 * 1024
+        }
+        defer { server.stop() }
+        let part = tempDirectory().appendingPathComponent("n.hdmpart")
+        let dl = download(server, part: part, backoff: { _ in 0.5 })
+        await dl.start()
+        while server.requests.isEmpty { try await Task.sleep(nanoseconds: 5_000_000) }
+        server.update { $0.body = second; $0.bytesPerSecondPerConnection = nil }
+        let events = await collect(dl)
+        guard case .finished(let total) = events.last else { Issue.record("not finished: \(String(describing: events.last))"); return }
+        #expect(total == Int64(second.count))
+        #expect(try Data(contentsOf: part) == second)
+    }
+}

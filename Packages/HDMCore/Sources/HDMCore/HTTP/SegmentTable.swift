@@ -47,5 +47,6 @@ public final class SegmentTable: @unchecked Sendable {
     public var receivedBytes: Int64 { lock.withLock { segments.reduce(0) { $0 + $1.received } } }
     public var allComplete: Bool { lock.withLock { segments.allSatisfy(\.isComplete) } }
     public func resize(atLeast size: Int64) throws { try file.resize(atLeast: size) }
+    public func truncateFile(to size: Int64) throws { try file.truncate(to: size) }
     public func closeFile() { lock.withLock { file.close() } }
 }

@@ -42,6 +42,9 @@ public struct ProbeResult: Equatable, Sendable {
             let range = ContentRange(header: response.value(forHTTPHeaderField: "Content-Range"))
             totalBytes = range?.total
             resumable = range?.total != nil
+        } else if response.statusCode == 416 {
+            totalBytes = ProbeResult.unsatisfiedTotal(response.value(forHTTPHeaderField: "Content-Range"))
+            resumable = false
         } else {
             totalBytes = response.expectedContentLength > 0 ? response.expectedContentLength : nil
             resumable = false
@@ -55,4 +58,13 @@ public struct ProbeResult: Equatable, Sendable {
     }
 
     public var ifRangeValidator: String? { etag ?? lastModified }
+
+    /// Servers answer `bytes=0-` on an empty file with `416` and `Content-Range: bytes */0`.
+    public var isEmptyFile: Bool { statusCode == 416 && totalBytes == 0 }
+
+    /// The total from an unsatisfied-range header (`bytes */N`).
+    static func unsatisfiedTotal(_ header: String?) -> Int64? {
+        guard let raw = header?.trimmingCharacters(in: .whitespaces).lowercased(), raw.hasPrefix("bytes */") else { return nil }
+        return Int64(raw.dropFirst("bytes */".count))
+    }
 }

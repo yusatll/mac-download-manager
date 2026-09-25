@@ -26,6 +26,10 @@ public final class TestHTTPServer: @unchecked Sendable {
         public var dropOnceAfterBytes: Int?
         /// Statuses returned (with a tiny body) before normal responses resume.
         public var statusSequence: [Int] = []
+        /// Every body response is cut after this many bytes.
+        public var dropEveryAfterBytes: Int?
+        /// Connections beyond this many in flight are closed without any response (TCP-level refusal).
+        public var refuseBeyond: Int?
 
         public init(body: Data) { self.body = body }
     }
@@ -114,6 +118,17 @@ public final class TestHTTPServer: @unchecked Sendable {
         }
         defer { lock.withLock { active -= 1 } }
 
+        if let limit = cfg.refuseBeyond, lock.withLock({ active }) > limit {
+            connection.cancel()
+            return
+        }
+        // RFC 9110: an unsatisfiable range (e.g. bytes=0- on an empty file) gets 416, as nginx and S3 do.
+        if cfg.supportsRange, let rangeHeader = headers["range"], ifRangeMatches(headers["if-range"], cfg),
+           parseRange(rangeHeader, total: cfg.body.count) == nil {
+            await send(connection, head: responseHead(416, ["Content-Range": "bytes */\(cfg.body.count)", "Content-Length": "0",
+                                                           "Connection": "close"]), body: Data(), rate: nil, dropAfter: nil)
+            return
+        }
         if let forced {
             let body = Data("error \(forced)".utf8)
             await send(connection, head: responseHead(forced, ["Content-Length": "\(body.count)", "Connection": "close"]),
@@ -136,7 +151,7 @@ public final class TestHTTPServer: @unchecked Sendable {
         if let modified = cfg.lastModified { fields["Last-Modified"] = modified }
         if let disposition = cfg.contentDisposition { fields["Content-Disposition"] = disposition }
         await send(connection, head: responseHead(status, fields), body: slice,
-                   rate: cfg.bytesPerSecondPerConnection, dropAfter: dropAfter)
+                   rate: cfg.bytesPerSecondPerConnection, dropAfter: dropAfter ?? cfg.dropEveryAfterBytes)
     }
 
     private func parseRange(_ value: String, total: Int) -> ClosedRange<Int>? {

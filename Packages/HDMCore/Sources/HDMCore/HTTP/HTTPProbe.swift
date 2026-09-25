@@ -21,7 +21,8 @@ public enum HTTPProbe {
         let (bytes, response) = try await session.bytes(for: request)
         bytes.task.cancel()
         guard let http = response as? HTTPURLResponse else { throw ProbeError.notHTTP }
-        guard http.statusCode == 200 || http.statusCode == 206 else { throw ProbeError.http(http.statusCode) }
-        return ProbeResult(response: http)
+        let result = ProbeResult(response: http)
+        guard http.statusCode == 200 || http.statusCode == 206 || result.isEmptyFile else { throw ProbeError.http(http.statusCode) }
+        return result
     }
 }
