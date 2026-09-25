@@ -15,5 +15,6 @@ struct HizDownloadManagerApp: App {
         }
         .defaultSize(width: 1200, height: 650)
         .windowToolbarStyle(.expanded)
+        .commands { AppCommands(model: model) }
     }
 }

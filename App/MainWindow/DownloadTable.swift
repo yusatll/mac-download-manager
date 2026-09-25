@@ -50,6 +50,9 @@ struct DownloadTable: View {
             .width(min: 120, ideal: 150)
             TableColumn("Description", value: \.userDescription)
         }
+        .contextMenu(forSelectionType: UUID.self) { ids in
+            ItemContextMenu(ids: ids)
+        }
     }
 }
 
