@@ -22,6 +22,12 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var conflictPolicy: ConflictPolicy = .rename
     /// Prefer H.264/AAC formats so downloads open in QuickTime (spec §8.3).
     public var preferQuickTimeCompatible = true
+    /// Wildcard site exceptions the browser extension must not capture (spec §6.6 İstisnalar).
+    public var exceptionPatterns: [String] = []
+    /// Downloads smaller than this are left to the browser; 0 captures everything.
+    public var minimumCaptureSizeBytes: Int64 = 0
+    /// Show the "⬇ Download this video" overlay on video pages (spec §8.2).
+    public var videoPanelEnabled = true
 
     public static let defaultBaseFolder = FileManager.default
         .urls(for: .downloadsDirectory, in: .userDomainMask)[0]
@@ -67,5 +73,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
         preventSleep = try c.decodeIfPresent(Bool.self, forKey: .preventSleep) ?? d.preventSleep
         conflictPolicy = try c.decodeIfPresent(ConflictPolicy.self, forKey: .conflictPolicy) ?? d.conflictPolicy
         preferQuickTimeCompatible = try c.decodeIfPresent(Bool.self, forKey: .preferQuickTimeCompatible) ?? d.preferQuickTimeCompatible
+        exceptionPatterns = try c.decodeIfPresent([String].self, forKey: .exceptionPatterns) ?? d.exceptionPatterns
+        minimumCaptureSizeBytes = try c.decodeIfPresent(Int64.self, forKey: .minimumCaptureSizeBytes) ?? d.minimumCaptureSizeBytes
+        videoPanelEnabled = try c.decodeIfPresent(Bool.self, forKey: .videoPanelEnabled) ?? d.videoPanelEnabled
     }
 }

@@ -11,10 +11,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         model.start()
     }
 
-    /// Saves exact segment state of running downloads before quitting.
+    /// Stops the IPC server and saves exact state of running downloads before quitting.
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         Task {
-            await model.manager.prepareForTermination()
+            await model.prepareForTermination()
             sender.reply(toApplicationShouldTerminate: true)
         }
         return .terminateLater

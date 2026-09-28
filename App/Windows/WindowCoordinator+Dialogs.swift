@@ -22,6 +22,20 @@ extension WindowCoordinator {
         }
     }
 
+    func showAllLinks(_ links: [LinkCandidate], pageURL: URL?, headers: [String: String]) {
+        let key = "links-\(UUID().uuidString.prefix(8))"
+        show(key: key, title: String(localized: "Download All Links")) {
+            AllLinksView(links: links, pageURL: pageURL, headers: headers, close: { [weak self] in self?.close(key: key) })
+        }
+    }
+
+    func showOnboarding() {
+        let key = "onboarding"
+        show(key: key, title: String(localized: "Welcome to HDM")) {
+            OnboardingView(close: { [weak self] in self?.close(key: key) })
+        }
+    }
+
     func showProgress(_ id: UUID) {
         show(key: Self.progressKey(id), title: model.manager.item(id)?.fileName ?? "") {
             ProgressWindowView(id: id)

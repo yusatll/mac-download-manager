@@ -25,9 +25,21 @@ targets:
     dependencies:
       - package: HDMCore
         product: HDMCore
+      - package: HDMCore
+        product: HDMIPC
+      - target: HDMExtension
+    postBuildScripts:
+      - script: |
+          cd "$SRCROOT/Packages/HDMCore"
+          BIN_PATH=$(swift build -c debug --product hdm-bridge --show-bin-path)
+          HELPERS="$BUILT_PRODUCTS_DIR/$FULL_PRODUCT_NAME/Contents/Helpers"
+          mkdir -p "$HELPERS"
+          cp "$BIN_PATH/hdm-bridge" "$HELPERS/hdm-bridge"
+        name: Embed hdm-bridge helper
     info:
       path: App/Info.plist
       properties:
+        HDMDevelopmentTeam: $(DEVELOPMENT_TEAM)
         CFBundleDisplayName: Hiz Download Manager
         CFBundleName: Hiz Download Manager
         CFBundleShortVersionString: "0.1.0"
@@ -43,6 +55,27 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.hizdm.HizDownloadManager
         PRODUCT_NAME: Hiz Download Manager
         ENABLE_HARDENED_RUNTIME: YES
+        CODE_SIGN_ENTITLEMENTS: App/HizDownloadManager.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         CODE_SIGN_STYLE: Automatic
+
+  HDMExtension:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: SafariExtension
+    dependencies:
+      - package: HDMCore
+        product: HDMIPC
+    info:
+      path: SafariExtension/Info.plist
+      properties:
+        HDMDevelopmentTeam: $(DEVELOPMENT_TEAM)
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hizdm.HizDownloadManager.SafariExtension
+        PRODUCT_NAME: HDM Extension
+        CODE_SIGN_ENTITLEMENTS: SafariExtension/SafariExtension.entitlements
+        CODE_SIGN_STYLE: Automatic
+        SKIP_INSTALL: YES

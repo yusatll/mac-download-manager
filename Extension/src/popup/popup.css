@@ -1,0 +1,28 @@
+body {
+  width: 320px; margin: 0; padding: 12px;
+  font: 13px -apple-system, system-ui, sans-serif;
+  background: var(--bg, #fff); color: var(--fg, #1d1d1f);
+}
+@media (prefers-color-scheme: dark) {
+  body { --bg: #1e1e20; --fg: #f5f5f7; }
+  .status.off { color: #ff9f0a; }
+}
+header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.logo { font-weight: 700; }
+.status { color: #30d158; }
+.status.off { color: #c00; }
+.row { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+.link {
+  background: none; border: none; padding: 0; color: #0a84ff;
+  cursor: pointer; font: inherit; text-align: left;
+}
+.link:hover { text-decoration: underline; }
+h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; opacity: .6; margin: 14px 0 6px; }
+#media-list { display: flex; flex-direction: column; gap: 2px; max-height: 240px; overflow-y: auto; }
+.media-row {
+  padding: 7px 9px; border-radius: 7px; cursor: pointer;
+  display: flex; justify-content: space-between; gap: 8px;
+}
+.media-row:hover { background: rgba(10,132,255,.14); }
+.media-row .meta { opacity: .6; font-size: 12px; }
+.empty { opacity: .55; padding: 6px 0; }

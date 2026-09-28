@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <span class="logo">⬇ HDM</span>
+    <span id="status" class="status">…</span>
+  </header>
+
+  <label class="row">
+    <input type="checkbox" id="capture">
+    <span id="capture-label"></span>
+  </label>
+
+  <button id="exclude" class="link"></button>
+
+  <section id="media-section" hidden>
+    <h2 id="media-title"></h2>
+    <div id="media-list"></div>
+  </section>
+
+  <script src="../lib/hdm.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

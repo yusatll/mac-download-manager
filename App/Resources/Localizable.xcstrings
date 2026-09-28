@@ -15,6 +15,46 @@
         }
       }
     },
+    "%lld": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        }
+      }
+    },
+    "1 MB": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 MB"
+          }
+        }
+      }
+    },
+    "10 MB": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "10 MB"
+          }
+        }
+      }
+    },
+    "5 MB": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5 MB"
+          }
+        }
+      }
+    },
     "Add URL": {
       "localizations": {
         "tr": {
@@ -55,12 +95,32 @@
         }
       }
     },
+    "All": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hepsi"
+          }
+        }
+      }
+    },
     "All Downloads": {
       "localizations": {
         "tr": {
           "stringUnit": {
             "state": "translated",
             "value": "Tüm İndirmeler"
+          }
+        }
+      }
+    },
+    "All links": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tüm linkler"
           }
         }
       }
@@ -91,6 +151,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ana klasör:"
+          }
+        }
+      }
+    },
+    "Browsers": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tarayıcılar"
           }
         }
       }
@@ -135,6 +205,16 @@
         }
       }
     },
+    "Category": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kategori"
+          }
+        }
+      }
+    },
     "Category:": {
       "localizations": {
         "tr": {
@@ -175,6 +255,26 @@
         }
       }
     },
+    "Chrome / Brave / Edge / Vivaldi": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chrome / Brave / Edge / Vivaldi"
+          }
+        }
+      }
+    },
+    "Clipboard": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pano"
+          }
+        }
+      }
+    },
     "Close": {
       "localizations": {
         "tr": {
@@ -205,6 +305,16 @@
         }
       }
     },
+    "Connected — last seen %@": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bağlı — son görülme %@"
+          }
+        }
+      }
+    },
     "Connecting…": {
       "localizations": {
         "tr": {
@@ -231,6 +341,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "İndirme başına bağlantı:"
+          }
+        }
+      }
+    },
+    "Copy a file or video link anywhere and HDM offers to download it. You can turn this off in Settings → General.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bir dosya veya video linkini herhangi bir yerde kopyalayın, HDM indirmeyi önerir. Bunu Ayarlar → Genel’den kapatabilirsiniz."
           }
         }
       }
@@ -345,6 +465,16 @@
         }
       }
     },
+    "Download All Links": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tüm Linkleri İndir"
+          }
+        }
+      }
+    },
     "Download File Info": {
       "localizations": {
         "tr": {
@@ -361,6 +491,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sonra İndir"
+          }
+        }
+      }
+    },
+    "Download Selected": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçilenleri İndir"
           }
         }
       }
@@ -455,6 +595,26 @@
         }
       }
     },
+    "Enable HDM in Safari → Settings → Extensions.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HDM’yi Safari → Ayarlar → Uzantılar bölümünden etkinleştirin."
+          }
+        }
+      }
+    },
+    "Enable in Safari…": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safari’de Etkinleştir…"
+          }
+        }
+      }
+    },
     "Enter New Address to Download": {
       "localizations": {
         "tr": {
@@ -471,6 +631,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hata"
+          }
+        }
+      }
+    },
+    "Exceptions": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İstisnalar"
           }
         }
       }
@@ -521,6 +691,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Yakalanacak dosya türleri:"
+          }
+        }
+      }
+    },
+    "Filter": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filtre"
           }
         }
       }
@@ -605,6 +785,16 @@
         }
       }
     },
+    "HDM registers its browser connection automatically when it runs.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HDM çalıştığında tarayıcı bağlantısını kendiliğinden kurar."
+          }
+        }
+      }
+    },
     "Helper programs": {
       "localizations": {
         "tr": {
@@ -644,6 +834,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bilgi"
+          }
+        }
+      }
+    },
+    "Install the HDM extension: open chrome://extensions, enable Developer mode and load the “Extension/dist/hdm-chrome” folder from the repository (Web Store listing coming soon).": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HDM eklentisini kurun: chrome://extensions adresini açın, Geliştirici modunu etkinleştirin ve depodaki “Extension/dist/hdm-chrome” klasörünü yükleyin (Web Store kaydı yakında)."
+          }
+        }
+      }
+    },
+    "Install the extension": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eklentiyi kur"
           }
         }
       }
@@ -693,7 +903,7 @@
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Giriş yapınca HDM'yi başlat"
+            "value": "Oturum açtığımda HDM’yi başlat"
           }
         }
       }
@@ -714,6 +924,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Link süresi doldu"
+          }
+        }
+      }
+    },
+    "Load “Extension/dist/hdm-chrome” as an unpacked extension (chrome://extensions → Developer mode).": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Extension/dist/hdm-chrome” klasörünü paketlenmemiş eklenti olarak yükleyin (chrome://extensions → Geliştirici modu)."
           }
         }
       }
@@ -758,6 +978,16 @@
         }
       }
     },
+    "Minimum size": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En küçük boyut"
+          }
+        }
+      }
+    },
     "Music": {
       "localizations": {
         "tr": {
@@ -778,12 +1008,32 @@
         }
       }
     },
+    "Name": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ad"
+          }
+        }
+      }
+    },
     "Network error: %@": {
       "localizations": {
         "tr": {
           "stringUnit": {
             "state": "translated",
             "value": "Ağ hatası: %@"
+          }
+        }
+      }
+    },
+    "Never capture from these sites": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu sitelerden asla yakalama"
           }
         }
       }
@@ -838,6 +1088,16 @@
         }
       }
     },
+    "No minimum": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alt sınır yok"
+          }
+        }
+      }
+    },
     "Not found": {
       "localizations": {
         "tr": {
@@ -848,12 +1108,32 @@
         }
       }
     },
+    "Not seen yet": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Henüz görülmedi"
+          }
+        }
+      }
+    },
     "OK": {
       "localizations": {
         "tr": {
           "stringUnit": {
             "state": "translated",
             "value": "Tamam"
+          }
+        }
+      }
+    },
+    "One pattern per line or space-separated, e.g. *.apple.com or cdn.example.com": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Her satıra bir desen veya boşlukla ayrılmış, örn. *.apple.com veya cdn.example.com"
           }
         }
       }
@@ -1058,6 +1338,16 @@
         }
       }
     },
+    "Rebuild Browser Connection": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tarayıcı Bağlantısını Yeniden Kur"
+          }
+        }
+      }
+    },
     "Receiving data…": {
       "localizations": {
         "tr": {
@@ -1198,6 +1488,26 @@
         }
       }
     },
+    "Safari": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safari"
+          }
+        }
+      }
+    },
+    "Safari → Settings → Extensions": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safari → Ayarlar → Uzantılar"
+          }
+        }
+      }
+    },
     "Save As:": {
       "localizations": {
         "tr": {
@@ -1224,6 +1534,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Segmentler"
+          }
+        }
+      }
+    },
+    "Select All": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tümünü Seç"
+          }
+        }
+      }
+    },
+    "Select None": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hiçbirini Seçme"
           }
         }
       }
@@ -1288,6 +1618,16 @@
         }
       }
     },
+    "Show the “Download this video” button on video pages": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video sayfalarında “Bu videoyu indir” düğmesini göster"
+          }
+        }
+      }
+    },
     "Simultaneous downloads:": {
       "localizations": {
         "tr": {
@@ -1314,6 +1654,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Boyut:"
+          }
+        }
+      }
+    },
+    "Skip downloads smaller than:": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Şundan küçük indirmeleri atla:"
+          }
+        }
+      }
+    },
+    "Smaller downloads stay in the browser.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Daha küçük indirmeler tarayıcıda kalır."
           }
         }
       }
@@ -1354,6 +1714,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kuyruğu Başlat"
+          }
+        }
+      }
+    },
+    "Start Using HDM": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HDM’yi Kullanmaya Başla"
           }
         }
       }
@@ -1538,6 +1908,16 @@
         }
       }
     },
+    "This page has no downloadable video.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu sayfada indirilebilir video yok."
+          }
+        }
+      }
+    },
     "This site is not supported by yt-dlp.": {
       "localizations": {
         "tr": {
@@ -1594,6 +1974,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hız:"
+          }
+        }
+      }
+    },
+    "URL": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "URL"
           }
         }
       }
@@ -1698,6 +2088,16 @@
         }
       }
     },
+    "Video panel": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video paneli"
+          }
+        }
+      }
+    },
     "Waiting for a new link": {
       "localizations": {
         "tr": {
@@ -1714,6 +2114,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Panodaki indirme linklerini izle"
+          }
+        }
+      }
+    },
+    "Welcome to HDM": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HDM’ye Hoş Geldiniz"
           }
         }
       }
