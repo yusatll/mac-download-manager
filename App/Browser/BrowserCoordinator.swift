@@ -67,7 +67,7 @@ final class BrowserCoordinator {
             servers.append(server)
             if socketURL != IPCProtocol.fallbackSocketPath() { groupServerBound = true }
         } catch {
-            NSLog("HDM: could not listen on \(socketURL.path): \(error)")
+            NSLog("MacDM: could not listen on \(socketURL.path): \(error)")
         }
     }
 

@@ -12,7 +12,7 @@ const mediaSection = document.getElementById('media-section');
 const mediaTitle = document.getElementById('media-title');
 const mediaList = document.getElementById('media-list');
 
-document.title = 'HDM';
+document.title = 'MacDM';
 captureLabel.textContent = HDM.t('captureOn');
 excludeBtn.textContent = HDM.t('excludeSite');
 mediaTitle.textContent = HDM.t('mediaOnTab');

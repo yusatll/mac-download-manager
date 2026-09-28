@@ -5,8 +5,8 @@
  * (which has no downloads API). lib/hdm.js is listed before this file in both manifests.
  */
 (() => {
-  if (window.__HDM_CONTENT__) return;
-  window.__HDM_CONTENT__ = true;
+  if (window.__MACDM_CONTENT__) return;
+  window.__MACDM_CONTENT__ = true;
 
   const B = globalThis.browser && globalThis.browser.runtime ? globalThis.browser : globalThis.chrome;
   const send = (message) => new Promise((resolve) => B.runtime.sendMessage(message, (reply) => resolve(reply || { ok: false })));
@@ -92,7 +92,7 @@
   // --- DRM detection (§8.1): page-hook posts a window message -----------------------
 
   window.addEventListener('message', (event) => {
-    if (event.source === window && event.data && event.data.__HDM_DRM__) {
+    if (event.source === window && event.data && event.data.__MACDM_DRM__) {
       send({ type: 'drmFound' });
       drmDetected = true;
     }
@@ -263,7 +263,7 @@
       const close = document.createElement('button');
       close.className = 'hdm-close';
       close.textContent = '×';
-      close.title = 'HDM';
+      close.title = 'MacDM';
       close.addEventListener('click', (event) => {
         event.preventDefault(); event.stopPropagation();
         dismissed.add(picked.video);

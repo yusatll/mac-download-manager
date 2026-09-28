@@ -7,7 +7,7 @@
  */
 (function (root) {
   const EXTENSION_VERSION = '0.2.0';
-  const NATIVE_HOST = 'com.hizdm.bridge';
+  const NATIVE_HOST = 'com.macdm.bridge';
 
   const DEFAULT_SETTINGS = {
     captureEnabled: true,
@@ -141,8 +141,8 @@
 
   const STRINGS = {
     en: {
-      downloadWithHDM: 'Download with HDM',
-      downloadAllWithHDM: 'Download all links with HDM',
+      downloadWithHDM: 'Download with MacDM',
+      downloadAllWithHDM: 'Download all links with MacDM',
       downloadThisVideo: 'Download this video',
       gettingQualities: 'Getting qualities…',
       audioOnly: 'Audio only',
@@ -150,17 +150,17 @@
       addedToDownloads: 'Added to downloads',
       failed: 'Failed',
       captureOn: 'Capture browser downloads',
-      connected: 'HDM is running',
-      disconnected: 'HDM is not running',
-      openHDM: 'Open HDM',
+      connected: 'MacDM is running',
+      disconnected: 'MacDM is not running',
+      openHDM: 'Open MacDM',
       excludeSite: "Don't capture from this site",
       excluded: 'Site excluded',
       mediaOnTab: 'Media on this tab',
       noMedia: 'No media found on this tab',
     },
     tr: {
-      downloadWithHDM: 'HDM ile indir',
-      downloadAllWithHDM: 'Tüm linkleri HDM ile indir',
+      downloadWithHDM: 'MacDM ile indir',
+      downloadAllWithHDM: 'Tüm linkleri MacDM ile indir',
       downloadThisVideo: 'Bu videoyu indir',
       gettingQualities: 'Kaliteler alınıyor…',
       audioOnly: 'Sadece ses',
@@ -168,9 +168,9 @@
       addedToDownloads: 'İndirmelere eklendi',
       failed: 'Başarısız',
       captureOn: 'Tarayıcı indirmelerini yakala',
-      connected: 'HDM çalışıyor',
-      disconnected: 'HDM çalışmıyor',
-      openHDM: "HDM'yi aç",
+      connected: 'MacDM çalışıyor',
+      disconnected: 'MacDM çalışmıyor',
+      openHDM: "MacDM'yi aç",
       excludeSite: 'Bu siteyi yakalama',
       excluded: 'Site istisnalara eklendi',
       mediaOnTab: 'Bu sekmedeki medyalar',

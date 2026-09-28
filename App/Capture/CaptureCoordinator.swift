@@ -48,7 +48,7 @@ final class CaptureCoordinator {
         guard let candidate = model.manager.refreshCandidate(fileName: fileName, totalBytes: totalBytes) else { return false }
         let alert = NSAlert()
         alert.messageText = String(localized: "Is this the new address for “\(candidate.fileName)”?")
-        alert.informativeText = String(localized: "HDM is waiting for a new link for this download. Use this address and continue where it left off?")
+        alert.informativeText = String(localized: "MacDM is waiting for a new link for this download. Use this address and continue where it left off?")
         alert.addButton(withTitle: String(localized: "Use New Address"))
         alert.addButton(withTitle: String(localized: "New Download"))
         guard alert.runModal() == .alertFirstButtonReturn else { return false }

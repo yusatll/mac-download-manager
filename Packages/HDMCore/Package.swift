@@ -8,13 +8,13 @@ let package = Package(
         .library(name: "HDMCore", targets: ["HDMCore"]),
         .library(name: "HDMIPC", targets: ["HDMIPC"]),
         .library(name: "HDMTestSupport", targets: ["HDMTestSupport"]),
-        .executable(name: "hdm-bridge", targets: ["hdm-bridge"]),
+        .executable(name: "macdm-bridge", targets: ["macdm-bridge"]),
     ],
     targets: [
         .target(name: "HDMCore"),
         // Thin wire-protocol module shared by the app, the bridge and the Safari appex (spec §4).
         .target(name: "HDMIPC"),
-        .executableTarget(name: "hdm-bridge", dependencies: ["HDMIPC"]),
+        .executableTarget(name: "macdm-bridge", dependencies: ["HDMIPC"]),
         .target(name: "HDMTestSupport"),
         .testTarget(name: "HDMCoreTests", dependencies: ["HDMCore", "HDMTestSupport"],
                     resources: [.copy("Fixtures")]),

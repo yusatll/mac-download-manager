@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "HDM — Hiz Download Manager",
+  "name": "MacDM — Mac Download Manager",
   "version": "0.2.0",
-  "description": "Send downloads and videos to Hiz Download Manager: multi-connection downloads, quality picker for video sites.",
+  "description": "Send downloads and videos to MacDM: multi-connection downloads, quality picker for video sites, browser takeover.",
   "minimum_chrome_version": "111",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAswUNZ8JsVxcl7z0gEBtTy+50ruy+BHFsp6RoSCDfhu6X8NmfS8xrTybNPZDBqxh6vhSQLw7hjIHQWTiNjWJr4AQXkclBNZSDdbu6Mvv+Xlkl4dUCl6eomFKJhWwAgEiu6DEmWRNj3Reurlx+l3rqVc/Jo+zVZYK9j5l/0/4TelmlL5BSbZ5401WVjhVT9csgNUSQNvhGYmfBDPzVyDt568GJ8v2xs2zsXaQAMx6/MvUsuzdwXKcjOg9hyygdqULCQTCtp0NrgoCGAcOrI0VqG9rHY3PweOAFw1wkJB0BSFnfs1maPZGOKocCNY/Fbxmjdd0b22PrBisRl4HEKaOPtwIDAQAB",
   "icons": {

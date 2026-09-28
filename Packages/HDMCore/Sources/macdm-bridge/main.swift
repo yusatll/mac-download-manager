@@ -5,7 +5,7 @@ import HDMIPC
 /// Chrome/Brave native-messaging host: reads one framed message from stdin, relays it to the
 /// HDM socket, writes the framed reply to stdout and exits (spec §7.2). Chrome launches this
 /// binary for every `sendNativeMessage` call.
-let appBundleID = "com.hizdm.HizDownloadManager"
+let appBundleID = "com.macdm.MacDM"
 
 func readSTDIN() throws -> IPCMessage {
     let stdin = FileHandle.standardInput
@@ -45,6 +45,6 @@ do {
     exit(0)   // the reply goes back as a normal message; a non-zero exit would just add noise
 } catch {
     // Only a stdin framing failure reaches here: nothing was read, so there is no id to answer.
-    FileHandle.standardError.write(Data("hdm-bridge: \(error)\n".utf8))
+    FileHandle.standardError.write(Data("macdm-bridge: \(error)\n".utf8))
     exit(1)
 }

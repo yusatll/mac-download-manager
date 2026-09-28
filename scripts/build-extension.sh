@@ -1,11 +1,11 @@
 #!/bin/sh
 # Assembles the extension for both targets (spec §12 "make extension"):
-#   Extension/dist/hdm-chrome/    → "Load unpacked" in Chrome/Brave/Edge/Vivaldi + zip source
+#   Extension/dist/macdm-chrome/    → "Load unpacked" in Chrome/Brave/Edge/Vivaldi + zip source
 #   SafariExtension/Resources/    → resources embedded in the Safari app extension
 set -eu
 cd "$(dirname "$0")/.."
 
-CHROME_DIST=Extension/dist/hdm-chrome
+CHROME_DIST=Extension/dist/macdm-chrome
 SAFARI_RES=SafariExtension/Resources
 
 rm -rf "$CHROME_DIST" "$SAFARI_RES"
@@ -29,7 +29,7 @@ cp Extension/manifest.safari.json "$SAFARI_RES/manifest.json"
 
 # The Chrome package for distribution
 cd Extension/dist
-zip -qr hdm-chrome.zip hdm-chrome
+zip -qr macdm-chrome.zip macdm-chrome
 cd ../..
 
-echo "extension built: $CHROME_DIST, Extension/dist/hdm-chrome.zip, $SAFARI_RES"
+echo "extension built: $CHROME_DIST, Extension/dist/macdm-chrome.zip, $SAFARI_RES"

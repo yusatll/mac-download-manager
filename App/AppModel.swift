@@ -47,7 +47,7 @@ final class AppModel {
         await manager.prepareForTermination()
     }
 
-    private var onboardedKey: String { "HDM.onboarded.v1" }
+    private var onboardedKey: String { "MacDM.onboarded.v1" }
 
     private func showOnboardingIfNeeded() {
         guard !UserDefaults.standard.bool(forKey: onboardedKey) else { return }

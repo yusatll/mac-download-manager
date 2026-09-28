@@ -13,3 +13,6 @@ SafariExtension/Resources/
 # Pins the development extension ID; needed only to package/sign for the Chrome Web Store.
 Extension/extension-key.pem
 Extension/extension-pub.der
+
+# Release artifacts (upload to GitHub Releases, not the repo)
+dist/

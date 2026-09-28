@@ -10,7 +10,7 @@ public final class DownloadStore: Sendable {
 
     public static var defaultFileURL: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("HDM", isDirectory: true)
+            .appendingPathComponent("MacDM", isDirectory: true)
             .appendingPathComponent("downloads.json")
     }
 

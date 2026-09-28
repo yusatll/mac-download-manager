@@ -5,7 +5,7 @@
 	<!-- Only the shared container; the app itself stays unsandboxed (spec §3). -->
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>$(AppIdentifierPrefix)com.hizdm.shared</string>
+		<string>$(AppIdentifierPrefix)com.macdm.shared</string>
 	</array>
 </dict>
 </plist>

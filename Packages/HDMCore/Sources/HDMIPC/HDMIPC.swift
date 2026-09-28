@@ -12,7 +12,7 @@ public enum IPCProtocol {
 
     /// Where the app listens: the app-group container when a team is configured
     /// (`HDMDevelopmentTeam` is baked into the Info.plist at build time; the sandboxed Safari
-    /// appex may only reach that container). An existing `*.com.hizdm.shared` container always
+    /// appex may only reach that container). An existing `*.com.macdm.shared` container always
     /// wins, so a bridge spawned without a bundle lands on the same path the app created.
     /// Falls back to `fallbackSocketPath()` when no team is known.
     public static func socketPath() -> URL {
@@ -24,13 +24,13 @@ public enum IPCProtocol {
             .appendingPathComponent("Group Containers", isDirectory: true)
         let fm = FileManager.default
         if let names = try? fm.contentsOfDirectory(atPath: containers.path),
-           let group = names.first(where: { $0.hasSuffix(".com.hizdm.shared") }) {
+           let group = names.first(where: { $0.hasSuffix(".com.macdm.shared") }) {
             return containers.appendingPathComponent(group, isDirectory: true).appendingPathComponent("hdm.sock", isDirectory: false)
         }
         let team = (Bundle.main.object(forInfoDictionaryKey: "HDMDevelopmentTeam") as? String)?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if team.range(of: "^[A-Z0-9]{8,12}$", options: .regularExpression) != nil {
-            return containers.appendingPathComponent("\(team).com.hizdm.shared", isDirectory: true)
+            return containers.appendingPathComponent("\(team).com.macdm.shared", isDirectory: true)
                 .appendingPathComponent("hdm.sock", isDirectory: false)
         }
         return fallbackSocketPath()

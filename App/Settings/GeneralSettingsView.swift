@@ -20,10 +20,10 @@ struct GeneralSettingsView: View {
             Section("Windows") {
                 Toggle("Show the download progress window", isOn: $store.settings.showProgressWindow)
                 Toggle("Show the download complete dialog", isOn: $store.settings.showCompletionDialog)
-                Toggle("Keep HDM in the menu bar", isOn: $store.settings.keepInMenuBar)
+                Toggle("Keep MacDM in the menu bar", isOn: $store.settings.keepInMenuBar)
             }
             Section("System") {
-                Toggle("Launch HDM when I log in", isOn: $launchAtLogin)
+                Toggle("Launch MacDM when I log in", isOn: $launchAtLogin)
                 Toggle("Prevent sleep while downloading", isOn: $store.settings.preventSleep)
             }
         }

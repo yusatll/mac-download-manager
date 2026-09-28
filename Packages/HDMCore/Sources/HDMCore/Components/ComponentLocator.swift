@@ -37,7 +37,7 @@ public struct ComponentStatus: Sendable, Equatable, Identifiable {
 public enum ComponentLocator {
     public static let appBinDirectory = FileManager.default
         .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        .appendingPathComponent("HDM/bin", isDirectory: true)
+        .appendingPathComponent("MacDM/bin", isDirectory: true)
 
     public static func locate() -> ComponentPaths {
         let pathEnv = ProcessInfo.processInfo.environment["PATH"] ?? ""

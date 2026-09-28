@@ -107,7 +107,7 @@ extension AppModel {
         NSWorkspace.shared.open(item.pageURL ?? item.referrer ?? item.url)
         let alert = NSAlert()
         alert.messageText = String(localized: "Waiting for a new link")
-        alert.informativeText = String(localized: "Open the page in your browser and click or copy the download link again. HDM will use the new address and continue where it left off.")
+        alert.informativeText = String(localized: "Open the page in your browser and click or copy the download link again. MacDM will use the new address and continue where it left off.")
         alert.addButton(withTitle: String(localized: "OK"))
         alert.runModal()
     }

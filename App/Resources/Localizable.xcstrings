@@ -355,12 +355,12 @@
         }
       }
     },
-    "Copy a file or video link anywhere and HDM offers to download it. You can turn this off in Settings → General.": {
+    "Copy a file or video link anywhere and MacDM offers to download it. You can turn this off in Settings → General.": {
       "localizations": {
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bir dosya veya video linkini herhangi bir yerde kopyalayın, HDM indirmeyi önerir. Bunu Ayarlar → Genel’den kapatabilirsiniz."
+            "value": "Bir dosya veya video linkini herhangi bir yerde kopyalayın, MacDM indirmeyi önerir. Bunu Ayarlar → Genel’den kapatabilirsiniz."
           }
         }
       }
@@ -605,12 +605,12 @@
         }
       }
     },
-    "Enable HDM in Safari → Settings → Extensions.": {
+    "Enable MacDM in Safari → Settings → Extensions.": {
       "localizations": {
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "HDM’yi Safari → Ayarlar → Uzantılar bölümünden etkinleştirin."
+            "value": "MacDM’yi Safari → Ayarlar → Uzantılar bölümünden etkinleştirin."
           }
         }
       }
@@ -785,26 +785,6 @@
         }
       }
     },
-    "HDM is waiting for a new link for this download. Use this address and continue where it left off?": {
-      "localizations": {
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "HDM bu indirme için yeni bir link bekliyor. Bu adres kullanılıp kaldığı yerden devam edilsin mi?"
-          }
-        }
-      }
-    },
-    "HDM registers its browser connection automatically when it runs.": {
-      "localizations": {
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "HDM çalıştığında tarayıcı bağlantısını kendiliğinden kurar."
-          }
-        }
-      }
-    },
     "Helper programs": {
       "localizations": {
         "tr": {
@@ -848,12 +828,12 @@
         }
       }
     },
-    "Install the HDM extension: open chrome://extensions, enable Developer mode and load the “Extension/dist/hdm-chrome” folder from the repository (Web Store listing coming soon).": {
+    "Install the MacDM extension: open chrome://extensions, enable Developer mode and load the “Extension/dist/macdm-chrome” folder from the repository (Web Store listing coming soon).": {
       "localizations": {
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "HDM eklentisini kurun: chrome://extensions adresini açın, Geliştirici modunu etkinleştirin ve depodaki “Extension/dist/hdm-chrome” klasörünü yükleyin (Web Store kaydı yakında)."
+            "value": "MacDM eklentisini kurun: chrome://extensions adresini açın, Geliştirici modunu etkinleştirin ve depodaki “Extension/dist/hdm-chrome” klasörünü yükleyin (Web Store kaydı yakında)."
           }
         }
       }
@@ -878,12 +858,12 @@
         }
       }
     },
-    "Keep HDM in the menu bar": {
+    "Keep MacDM in the menu bar": {
       "localizations": {
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "HDM'yi menü çubuğunda tut"
+            "value": "MacDM'yi menü çubuğunda tut"
           }
         }
       }
@@ -908,12 +888,12 @@
         }
       }
     },
-    "Launch HDM when I log in": {
+    "Launch MacDM when I log in": {
       "localizations": {
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Oturum açtığımda HDM’yi başlat"
+            "value": "Oturum açtığımda MacDM’yi başlat"
           }
         }
       }
@@ -938,12 +918,32 @@
         }
       }
     },
-    "Load “Extension/dist/hdm-chrome” as an unpacked extension (chrome://extensions → Developer mode).": {
+    "Load “Extension/dist/macdm-chrome” as an unpacked extension (chrome://extensions → Developer mode).": {
       "localizations": {
         "tr": {
           "stringUnit": {
             "state": "translated",
             "value": "“Extension/dist/hdm-chrome” klasörünü paketlenmemiş eklenti olarak yükleyin (chrome://extensions → Geliştirici modu)."
+          }
+        }
+      }
+    },
+    "MacDM is waiting for a new link for this download. Use this address and continue where it left off?": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MacDM bu indirme için yeni bir link bekliyor. Bu adres kullanılıp kaldığı yerden devam edilsin mi?"
+          }
+        }
+      }
+    },
+    "MacDM registers its browser connection automatically when it runs.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MacDM çalıştığında tarayıcı bağlantısını kendiliğinden kurar."
           }
         }
       }
@@ -1198,12 +1198,12 @@
         }
       }
     },
-    "Open the page in your browser and click or copy the download link again. HDM will use the new address and continue where it left off.": {
+    "Open the page in your browser and click or copy the download link again. MacDM will use the new address and continue where it left off.": {
       "localizations": {
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sayfayı tarayıcınızda açın ve indirme linkine tekrar tıklayın ya da linki kopyalayın. HDM yeni adresi kullanıp kaldığı yerden devam edecek."
+            "value": "Sayfayı tarayıcınızda açın ve indirme linkine tekrar tıklayın ya da linki kopyalayın. MacDM yeni adresi kullanıp kaldığı yerden devam edecek."
           }
         }
       }
@@ -1738,12 +1738,12 @@
         }
       }
     },
-    "Start Using HDM": {
+    "Start Using MacDM": {
       "localizations": {
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "HDM’yi Kullanmaya Başla"
+            "value": "MacDM’yi Kullanmaya Başla"
           }
         }
       }
@@ -1908,12 +1908,12 @@
         }
       }
     },
-    "This address is not a video page HDM recognises. You can download it as a regular file instead.": {
+    "This address is not a video page MacDM recognises. You can download it as a regular file instead.": {
       "localizations": {
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bu adres, HDM’nin tanıdığı bir video sayfası değil. Bunun yerine normal dosya olarak indirebilirsiniz."
+            "value": "Bu adres, MacDM’nin tanıdığı bir video sayfası değil. Bunun yerine normal dosya olarak indirebilirsiniz."
           }
         }
       }
@@ -2148,12 +2148,12 @@
         }
       }
     },
-    "Welcome to HDM": {
+    "Welcome to MacDM": {
       "localizations": {
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "HDM’ye Hoş Geldiniz"
+            "value": "MacDM’ye Hoş Geldiniz"
           }
         }
       }

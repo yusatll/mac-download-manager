@@ -1,5 +1,5 @@
-.PHONY: bootstrap project test extension app run clean
-APP = Hiz Download Manager
+.PHONY: bootstrap project test extension app dmg run clean
+APP = MacDM
 
 bootstrap:
 	@command -v xcodegen >/dev/null || brew install xcodegen
@@ -18,8 +18,11 @@ test:
 app: project
 	xcodebuild -project HizDownloadManager.xcodeproj -scheme HizDownloadManager -configuration Debug -derivedDataPath build -quiet build
 
+dmg: project
+	./scripts/make-dmg.sh
+
 run: app
 	open "build/Build/Products/Debug/$(APP).app"
 
 clean:
-	rm -rf build Packages/HDMCore/.build HizDownloadManager.xcodeproj Extension/dist
+	rm -rf build dist Packages/HDMCore/.build HizDownloadManager.xcodeproj Extension/dist

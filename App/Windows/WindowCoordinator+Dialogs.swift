@@ -31,7 +31,7 @@ extension WindowCoordinator {
 
     func showOnboarding() {
         let key = "onboarding"
-        show(key: key, title: String(localized: "Welcome to HDM")) {
+        show(key: key, title: String(localized: "Welcome to MacDM")) {
             OnboardingView(close: { [weak self] in self?.close(key: key) })
         }
     }

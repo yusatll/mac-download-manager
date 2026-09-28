@@ -34,14 +34,14 @@ struct BrowserSettingsView: View {
             }
             Section("Install the extension") {
                 LabeledContent("Chrome / Brave / Edge / Vivaldi") {
-                    Text("Load “Extension/dist/hdm-chrome” as an unpacked extension (chrome://extensions → Developer mode).")
+                    Text("Load “Extension/dist/macdm-chrome” as an unpacked extension (chrome://extensions → Developer mode).")
                         .font(.callout).foregroundStyle(.secondary)
                 }
                 LabeledContent("Safari") {
                     HStack {
                         Button("Enable in Safari…") {
                             SFSafariApplication.showPreferencesForExtension(
-                                withIdentifier: "com.hizdm.HizDownloadManager.SafariExtension") { _ in }
+                                withIdentifier: "com.macdm.MacDM.SafariExtension") { _ in }
                         }
                         Text("Safari → Settings → Extensions")
                             .font(.callout).foregroundStyle(.secondary)

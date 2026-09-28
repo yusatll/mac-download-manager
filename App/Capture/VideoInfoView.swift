@@ -57,7 +57,7 @@ struct VideoInfoView: View {
                     Text(pending.url.absoluteString).lineLimit(2).truncationMode(.middle)
                         .foregroundStyle(.secondary).textSelection(.enabled)
                     if allowsFallback {
-                        Text("This address is not a video page HDM recognises. You can download it as a regular file instead.")
+                        Text("This address is not a video page MacDM recognises. You can download it as a regular file instead.")
                             .foregroundStyle(.secondary)
                     }
                 }

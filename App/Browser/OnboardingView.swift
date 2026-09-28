@@ -12,30 +12,30 @@ struct OnboardingView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Label("Welcome to HDM", systemImage: "arrow.down.circle.fill").font(.title2).fontWeight(.semibold)
+            Label("Welcome to MacDM", systemImage: "arrow.down.circle.fill").font(.title2).fontWeight(.semibold)
             VStack(alignment: .leading, spacing: 12) {
                 step(number: 1, title: String(localized: "Chrome / Brave / Edge / Vivaldi")) {
-                    Text("Install the HDM extension: open chrome://extensions, enable Developer mode and load the “Extension/dist/hdm-chrome” folder from the repository (Web Store listing coming soon).")
-                    Text("HDM registers its browser connection automatically when it runs.")
+                    Text("Install the MacDM extension: open chrome://extensions, enable Developer mode and load the “Extension/dist/macdm-chrome” folder from the repository (Web Store listing coming soon).")
+                    Text("MacDM registers its browser connection automatically when it runs.")
                         .font(.callout).foregroundStyle(.secondary)
                 }
                 step(number: 2, title: String(localized: "Safari")) {
-                    Text("Enable HDM in Safari → Settings → Extensions.")
+                    Text("Enable MacDM in Safari → Settings → Extensions.")
                     Button("Enable in Safari…") { enableSafari() }
                 }
                 step(number: 3, title: String(localized: "Clipboard")) {
-                    Text("Copy a file or video link anywhere and HDM offers to download it. You can turn this off in Settings → General.")
+                    Text("Copy a file or video link anywhere and MacDM offers to download it. You can turn this off in Settings → General.")
                         .font(.callout).foregroundStyle(.secondary)
                 }
             }
             Divider()
-            Toggle("Launch HDM when I log in", isOn: $launchAtLogin)
+            Toggle("Launch MacDM when I log in", isOn: $launchAtLogin)
                 .onChange(of: launchAtLogin) { _, enabled in
                     _ = try? (enabled ? SMAppService.mainApp.register() : SMAppService.mainApp.unregister())
                 }
             HStack {
                 Spacer()
-                Button("Start Using HDM") { close() }.keyboardShortcut(.defaultAction)
+                Button("Start Using MacDM") { close() }.keyboardShortcut(.defaultAction)
             }
         }
         .padding(24)
@@ -55,8 +55,8 @@ struct OnboardingView: View {
 
     private func enableSafari() {
         SFSafariApplication.showPreferencesForExtension(
-            withIdentifier: "com.hizdm.HizDownloadManager.SafariExtension") { error in
-            if let error { NSLog("HDM: could not open Safari extension settings: \(error)") }
+            withIdentifier: "com.macdm.MacDM.SafariExtension") { error in
+            if let error { NSLog("MacDM: could not open Safari extension settings: \(error)") }
         }
     }
 }
