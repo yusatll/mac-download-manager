@@ -85,7 +85,7 @@ Safari extension  ── sendNativeMessage ──> appex ───────�
 
 - `HTTPEngine` probes with `Range`, splits dynamically, retries with backoff, and re-validates on resume.
 - `MediaEngine` drives `yt-dlp` (quality query + download), folds per-format progress into one monotonic bar, and merges to MP4 with ffmpeg.
-- The full design lives in [`docs/superpowers/specs/2026-09-25-hiz-download-manager-design.md`](docs/superpowers/specs/2026-09-25-hiz-download-manager-design.md).
+- The full design lives in [`docs/design.md`](docs/design.md).
 
 ## Roadmap
 

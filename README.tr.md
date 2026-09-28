@@ -85,7 +85,7 @@ Safari uzantısı    ── sendNativeMessage ──> appex ──────�
 
 - `HTTPEngine` `Range` ile yoklar, parçaları dinamik böler, geri çekilmeli yeniden dener, devamları doğrular.
 - `MediaEngine` yt-dlp'yi sürer (kalite sorgusu + indirme), format başına ilerlemeyi tek bir ilerleyen çubukta birleştirir ve ffmpeg ile MP4'e birleştirir.
-- Tamamı için tasarım belgesi: [`docs/superpowers/specs/...`](docs/superpowers/specs/2026-09-25-hiz-download-manager-design.md)
+- Tamamı için tasarım belgesi: [`docs/design.md`](docs/design.md)
 
 ## Yol haritası
 

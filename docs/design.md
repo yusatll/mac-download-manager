@@ -1,3 +1,5 @@
+> **Güncelleme (2026-09-28):** Bu belge projenin ilk adıyla (*Hiz Download Manager*) yazıldı. Proje artık **MacDM — Mac Download Manager** (uygulama kimlikleri `com.macdm.*`, köprü `macdm-bridge`). Belge, tarihsel tasarım kaydı olarak içeriğiyle aynen korunur; kimlik referansları eski adları taşır.
+
 # Hiz Download Manager (HDM) — Tasarım Belgesi
 
 - **Tarih:** 2026-09-25
