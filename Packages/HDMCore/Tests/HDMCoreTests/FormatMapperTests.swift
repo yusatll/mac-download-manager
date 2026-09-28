@@ -26,14 +26,71 @@ import Testing
         let audio = options.last!
         #expect(audio.audioOnly)
         #expect(audio.selector == "ba/b")
-        #expect(audio.sortSpec == nil)
+        #expect(audio.sortSpec == FormatMapper.audioSort)
         #expect(audio.approxSize == 10271496)   // m4a 140 preferred over opus 251 by rank
     }
 
-    @Test func withoutQuickTimePreferenceNoSortSpec() throws {
+    @Test func withoutQuickTimePreferenceUsesCompactSort() throws {
         let options = FormatMapper.options(from: try decode(fixture: youTubeFormats), preferQuickTimeCompatible: false)
-        #expect(options.allSatisfy { $0.sortSpec == nil || $0.audioOnly })
-        #expect(options.first?.sortSpec == nil)
+        #expect(options.filter { !$0.audioOnly }.allSatisfy { $0.sortSpec == FormatMapper.compactSort })
+        #expect(options.first(where: \.audioOnly)?.sortSpec == FormatMapper.audioSort)
+    }
+
+    /// YouTube now duplicates every itag with an unsized "premium" variant at ~2.4× the bitrate
+    /// (e.g. 311 next to 298 at 720p). The estimate must pick the size-known one — and that is
+    /// exactly what the `+tbr` in the sort spec makes yt-dlp download.
+    @Test func premiumDuplicatesLoseToSizedFormats() throws {
+        let json = """
+        {"title":"Bunny 60fps","duration":635,
+         "formats":[
+          {"format_id":"140","ext":"m4a","vcodec":"none","acodec":"mp4a.40.2","filesize":10271496,"tbr":129.481},
+          {"format_id":"311","ext":"mp4","vcodec":"avc1.4D4020","acodec":"none","height":720,"tbr":4553.84},
+          {"format_id":"298","ext":"mp4","vcodec":"avc1.4d4020","acodec":"none","height":720,"filesize":150524867,"tbr":1897.67},
+          {"format_id":"612","ext":"mp4","vcodec":"vp09.00.40.08","acodec":"none","height":720,"tbr":3042.62},
+          {"format_id":"302","ext":"webm","vcodec":"vp9","acodec":"none","height":720,"filesize":112676322,"tbr":1420.51},
+          {"format_id":"398","ext":"mp4","vcodec":"av01.0.08M.08","acodec":"none","height":720,"filesize":71283827,"tbr":898.678}
+         ]}
+        """
+        let video = FormatMapper.videoInfo(from: try decode(fixture: json))
+        let row = try #require(video.options.first { !$0.audioOnly })
+        #expect(row.label == "720p")
+        let estimated = try #require(row.approxSize)
+        #expect(estimated == 150_524_867 + 10_271_496, "estimate = sized H.264 298 + audio, not the unsized 311 (got \(estimated))")
+        #expect(row.note == nil)
+        #expect(row.sortSpec == FormatMapper.quickTimeSort)
+        // Without the QuickTime preference both sides switch to the compact sort deterministically.
+        let compact = FormatMapper.videoInfo(from: try decode(fixture: json), preferQuickTimeCompatible: false)
+        #expect(compact.options.first { !$0.audioOnly }?.sortSpec == FormatMapper.compactSort)
+    }
+
+    @Test func unsizedFormatsEstimateFromBitrateAndDuration() throws {
+        let json = """
+        {"title":"T","duration":60,
+         "formats":[
+          {"format_id":"140","ext":"m4a","vcodec":"none","acodec":"mp4a.40.2","tbr":64},
+          {"format_id":"999","ext":"mp4","vcodec":"avc1.4d401f","acodec":"none","height":480,"tbr":1000}
+         ]}
+        """
+        let video = FormatMapper.videoInfo(from: try decode(fixture: json))
+        let row = try #require(video.options.first { !$0.audioOnly })
+        let estimated = try #require(row.approxSize)
+        // 1000 kbps × 60 s = 7,500,000 bytes; audio 64 kbps × 60 s = 480,000.
+        #expect(estimated == 7_980_000, "got \(estimated)")
+    }
+
+    @Test func audioRowPrefersM4aAndAvoidsTranscode() throws {
+        let json = """
+        {"title":"T","duration":100,
+         "formats":[
+          {"format_id":"251","ext":"webm","vcodec":"none","acodec":"opus","filesize":1000000,"tbr":130.5},
+          {"format_id":"140","ext":"m4a","vcodec":"none","acodec":"mp4a.40.2","filesize":990000,"tbr":129.4},
+          {"format_id":"140-drc","ext":"m4a","vcodec":"none","acodec":"mp4a.40.2","filesize":980000,"tbr":129.4,"format_note":"medium, DRC"}
+         ]}
+        """
+        let video = FormatMapper.videoInfo(from: try decode(fixture: json))
+        let audio = try #require(video.options.first { $0.audioOnly })
+        #expect(audio.approxSize == 990_000, "plain m4a wins over higher-bitrate opus and the DRC copy")
+        #expect(audio.sortSpec == FormatMapper.audioSort)
     }
 
     @Test func muxedOnlySourceYieldsFallbackRow() throws {

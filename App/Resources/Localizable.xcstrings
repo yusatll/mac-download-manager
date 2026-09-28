@@ -25,6 +25,16 @@
         }
       }
     },
+    "%lld videos": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld video"
+          }
+        }
+      }
+    },
     "1 MB": {
       "localizations": {
         "tr": {
@@ -1698,6 +1708,16 @@
         }
       }
     },
+    "Start Download (%lld videos)": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "İndirmeyi Başlat (%lld video)"
+          }
+        }
+      }
+    },
     "Start Over": {
       "localizations": {
         "tr": {
@@ -1834,6 +1854,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dosyalar diskinizde kalır."
+          }
+        }
+      }
+    },
+    "The selected quality is applied to every video in the playlist.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seçilen kalite, çalma listesindeki her videoya uygulanır."
           }
         }
       }

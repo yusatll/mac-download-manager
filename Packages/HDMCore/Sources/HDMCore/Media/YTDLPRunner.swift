@@ -8,14 +8,17 @@ public enum MediaQueryError: Error, Equatable, Sendable {
     case failed(String)
 }
 
-/// Asks yt-dlp what a page contains: `yt-dlp -J --no-playlist` (spec §8.3).
+/// Asks yt-dlp what a page contains: `yt-dlp -J --no-playlist` (spec §8.3), or a fast
+/// `--flat-playlist` listing when the URL is a playlist.
 public enum YTDLPRunner {
     public static func query(pageURL: URL, headers: [String: String] = [:],
-                             tools: ComponentPaths, timeout: TimeInterval = 30) async throws -> YTDLPInfo {
+                             tools: ComponentPaths, timeout: TimeInterval = 30,
+                             flatPlaylist: Bool = false) async throws -> YTDLPInfo {
         guard let binary = tools.ytDLP else { throw MediaQueryError.ytDLPNotFound }
         let process = Process()
         process.executableURL = binary
-        var arguments = ["-J", "--no-playlist", "--no-update", "--no-warnings"]
+        var arguments = ["-J", "--no-update", "--no-warnings"]
+        arguments.append(flatPlaylist ? "--flat-playlist" : "--no-playlist")
         for (name, value) in headers.sorted(by: { $0.key < $1.key }) {
             arguments += ["--add-header", "\(name): \(value)"]
         }

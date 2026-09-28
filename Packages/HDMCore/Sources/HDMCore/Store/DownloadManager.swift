@@ -133,8 +133,13 @@ public final class DownloadManager {
         let fileName: String
         if let job = new.media {
             // yt-dlp owns the extension (`base.%(ext)s`); uniqueness is reserved on the base name.
+            // A playlist job owns a *folder* of the same base instead of a single file.
             let base = (FilenameResolver.sanitize(new.fileName) as NSString).deletingPathExtension
-            fileName = reserveMediaName(base, in: new.directory) + "." + (job.audioOnly ? "m4a" : "mp4")
+            if job.playlist {
+                fileName = reserveMediaName(base, in: new.directory, folder: true)
+            } else {
+                fileName = reserveMediaName(base, in: new.directory) + "." + (job.audioOnly ? "m4a" : "mp4")
+            }
         } else {
             fileName = reserveName(FilenameResolver.sanitize(new.fileName), in: new.directory)
         }
@@ -350,13 +355,17 @@ public final class DownloadManager {
     }
 
     /// Media names are unique on the extension-less base: `Title`, `Title (2)`, … so that
-    /// `Title.f137.mp4.part` and `Title.mp4` of two jobs never collide.
-    private func reserveMediaName(_ base: String, in directory: URL) -> String {
+    /// `Title.f137.mp4.part` and `Title.mp4` of two jobs never collide. Playlist jobs reserve
+    /// the same base as a *folder*.
+    private func reserveMediaName(_ base: String, in directory: URL, folder: Bool = false) -> String {
         let fm = FileManager.default
         let dir = directory.standardizedFileURL
         return FilenameResolver.uniqueName(base) { candidate in
             let ownBase = { (name: String) in (name as NSString).deletingPathExtension }
             if items.contains(where: { $0.saveDirectory.standardizedFileURL == dir && ownBase($0.fileName) == candidate }) {
+                return true
+            }
+            if folder, fm.fileExists(atPath: dir.appendingPathComponent(candidate).path) {
                 return true
             }
             guard let entries = try? fm.contentsOfDirectory(atPath: dir.path) else { return false }
@@ -450,10 +459,14 @@ public final class DownloadManager {
         let global = settings.settings.globalSpeedLimit
         let perItem = item.speedLimit ?? 0
         let limit = global > 0 && perItem > 0 ? min(global, perItem) : max(global, perItem)
+        // Playlist jobs download every entry into their own subfolder, named `index - title`.
         let request = MediaRequest(
             sourceURL: job.sourceURL, formatSelector: job.formatSelector, sortSpec: job.sortSpec,
-            audioOnly: job.audioOnly, directory: item.saveDirectory,
-            baseName: (item.fileName as NSString).deletingPathExtension,
+            audioOnly: job.audioOnly, playlist: job.playlist,
+            directory: job.playlist ? item.saveDirectory.appendingPathComponent(item.fileName, isDirectory: true)
+                                    : item.saveDirectory,
+            baseName: job.playlist ? "%(playlist_index)03d - %(title).190B"
+                                   : (item.fileName as NSString).deletingPathExtension,
             approxTotalBytes: item.totalBytes, headers: job.headers, tools: tools,
             concurrentFragments: max(1, settings.settings.maxConnections), speedLimitBytesPerSecond: limit)
         let engine = MediaEngine(request: request)
@@ -492,7 +505,10 @@ public final class DownloadManager {
         case .finished(let path, let total):
             mediaRunning[id] = nil
             live[id] = nil
-            if let path {
+            if items[index].media?.playlist == true {
+                // The item's file is the folder of numbered entries; leave the reserved name.
+                if total > 0 { items[index].receivedBytes = total }
+            } else if let path {
                 items[index].fileName = path.lastPathComponent
                 items[index].saveDirectory = path.deletingLastPathComponent()
                 if total > 0 { items[index].totalBytes = total }
@@ -514,13 +530,20 @@ public final class DownloadManager {
 
     private func finalizeMedia(_ index: Int) {
         var item = items[index]
-        Self.markQuarantined(item.fileURL, source: item.url, page: item.pageURL ?? item.referrer)
-        item.status = .completed
-        item.completedAt = Date()
-        item.awaitingRefresh = false
-        if let size = try? item.fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize, Int64(size) > item.receivedBytes {
-            item.totalBytes = Int64(size)
-            item.receivedBytes = Int64(size)
+        if item.media?.playlist == true {
+            item.status = .completed
+            item.completedAt = Date()
+            item.awaitingRefresh = false
+        } else {
+            Self.markQuarantined(item.fileURL, source: item.url, page: item.pageURL ?? item.referrer)
+            item.status = .completed
+            item.completedAt = Date()
+            item.awaitingRefresh = false
+            if let size = try? item.fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize,
+               Int64(size) > item.receivedBytes {
+                item.totalBytes = Int64(size)
+                item.receivedBytes = Int64(size)
+            }
         }
         items[index] = item
         flush()
@@ -528,15 +551,26 @@ public final class DownloadManager {
     }
 
     /// yt-dlp's partial files for one job: `base.f137.mp4.part`, `base.mp4.part`, `base.ytdl`, …
+    /// A playlist job instead cleans the partial files inside its `base` folder.
     private func removeMediaArtifacts(of item: DownloadItem) {
         guard item.kind == .media else { return }
         let fm = FileManager.default
         let base = (item.fileName as NSString).deletingPathExtension
-        guard let entries = try? fm.contentsOfDirectory(atPath: item.saveDirectory.path) else { return }
-        for entry in entries where entry.hasPrefix(base + ".") {
+        if item.media?.playlist == true {
+            removeArtifacts(inside: item.saveDirectory.appendingPathComponent(base, isDirectory: true))
+            return
+        }
+        removeArtifacts(inside: item.saveDirectory, prefixedBy: base)
+    }
+
+    private func removeArtifacts(inside directory: URL, prefixedBy base: String? = nil) {
+        let fm = FileManager.default
+        guard let entries = try? fm.contentsOfDirectory(atPath: directory.path) else { return }
+        for entry in entries {
+            if let base, !entry.hasPrefix(base + ".") { continue }
             let ext = (entry as NSString).pathExtension.lowercased()
             if ext == "part" || ext == "ytdl" || ext == "temp" || ext.hasPrefix("part-") {
-                try? fm.removeItem(at: item.saveDirectory.appendingPathComponent(entry))
+                try? fm.removeItem(at: directory.appendingPathComponent(entry))
             }
         }
     }
@@ -546,6 +580,10 @@ public final class DownloadManager {
         guard item.kind == .media else { return }
         let fm = FileManager.default
         let base = (item.fileName as NSString).deletingPathExtension
+        if item.media?.playlist == true {
+            try? fm.removeItem(at: item.saveDirectory.appendingPathComponent(base, isDirectory: true))
+            return
+        }
         guard let entries = try? fm.contentsOfDirectory(atPath: item.saveDirectory.path) else { return }
         for entry in entries where entry.hasPrefix(base + ".") {
             try? fm.removeItem(at: item.saveDirectory.appendingPathComponent(entry))

@@ -2,7 +2,7 @@ import Foundation
 
 /// The yt-dlp job attached to a `DownloadItem` whose `kind` is `.media` (spec §8.3).
 /// Everything yt-dlp needs to re-run the download after a pause or an app restart.
-public struct MediaJob: Codable, Hashable, Sendable {
+public struct MediaJob: Hashable, Sendable {
     /// Page or stream URL handed to yt-dlp.
     public var sourceURL: URL
     /// yt-dlp format selector, e.g. `bv*[height<=1080]+ba/b[height<=1080]` or `ba/b`.
@@ -11,20 +11,47 @@ public struct MediaJob: Codable, Hashable, Sendable {
     public var sortSpec: String?
     public var title: String
     public var audioOnly: Bool
+    /// Download every video of the playlist at `sourceURL` into one subfolder.
+    public var playlist: Bool
+    /// Number of playlist entries, when known (progress totals are estimated from it).
+    public var playlistCount: Int?
     /// Sum of the chosen formats' (approximate) sizes, when yt-dlp reported any.
     public var approxTotalBytes: Int64?
     /// Extra request headers for stream URLs (Referer, Origin, …).
     public var headers: [String: String]
 
     public init(sourceURL: URL, formatSelector: String, sortSpec: String? = nil, title: String,
-                audioOnly: Bool, approxTotalBytes: Int64? = nil, headers: [String: String] = [:]) {
+                audioOnly: Bool, playlist: Bool = false, playlistCount: Int? = nil,
+                approxTotalBytes: Int64? = nil, headers: [String: String] = [:]) {
         self.sourceURL = sourceURL
         self.formatSelector = formatSelector
         self.sortSpec = sortSpec
         self.title = title
         self.audioOnly = audioOnly
+        self.playlist = playlist
+        self.playlistCount = playlistCount
         self.approxTotalBytes = approxTotalBytes
         self.headers = headers
+    }
+}
+
+extension MediaJob: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case sourceURL, formatSelector, sortSpec, title, audioOnly, playlist, playlistCount, approxTotalBytes, headers
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        sourceURL = try c.decode(URL.self, forKey: .sourceURL)
+        formatSelector = try c.decode(String.self, forKey: .formatSelector)
+        sortSpec = try c.decodeIfPresent(String.self, forKey: .sortSpec)
+        title = try c.decode(String.self, forKey: .title)
+        audioOnly = try c.decode(Bool.self, forKey: .audioOnly)
+        // Fields added after the first release decode as their defaults (old downloads.json).
+        playlist = try c.decodeIfPresent(Bool.self, forKey: .playlist) ?? false
+        playlistCount = try c.decodeIfPresent(Int.self, forKey: .playlistCount)
+        approxTotalBytes = try c.decodeIfPresent(Int64.self, forKey: .approxTotalBytes)
+        headers = try c.decodeIfPresent([String: String].self, forKey: .headers) ?? [:]
     }
 }
 

@@ -6,8 +6,11 @@ public struct MediaRequest: Sendable, Equatable {
     public var formatSelector: String
     public var sortSpec: String?
     public var audioOnly: Bool
+    /// Download the whole playlist at `sourceURL` into `directory` (one subfolder per job).
+    public var playlist: Bool
     public var directory: URL
-    /// File base name without extension; yt-dlp appends `.%(ext)s`.
+    /// File base name without extension; yt-dlp appends `.%(ext)s`. For playlists this is a
+    /// yt-dlp output template (e.g. `%(playlist_index)03d - %(title).190B`).
     public var baseName: String
     public var approxTotalBytes: Int64?
     public var headers: [String: String]
@@ -17,12 +20,14 @@ public struct MediaRequest: Sendable, Equatable {
     public var speedLimitBytesPerSecond: Int64
 
     public init(sourceURL: URL, formatSelector: String, sortSpec: String? = nil, audioOnly: Bool,
+                playlist: Bool = false,
                 directory: URL, baseName: String, approxTotalBytes: Int64? = nil, headers: [String: String] = [:],
                 tools: ComponentPaths, concurrentFragments: Int = 8, speedLimitBytesPerSecond: Int64 = 0) {
         self.sourceURL = sourceURL
         self.formatSelector = formatSelector
         self.sortSpec = sortSpec
         self.audioOnly = audioOnly
+        self.playlist = playlist
         self.directory = directory
         self.baseName = baseName
         self.approxTotalBytes = approxTotalBytes
@@ -42,7 +47,7 @@ public enum MediaPlan {
     public static func arguments(for request: MediaRequest) -> [String] {
         var args = [
             "-f", request.formatSelector,
-            "--no-playlist",
+            request.playlist ? "--yes-playlist" : "--no-playlist",
             "--continue",
             "--newline",
             "--no-update",

@@ -233,6 +233,30 @@ import Testing
         #expect(swapped.item(id)?.fileName == "Song.mp4")
     }
 
+    /// Playlist jobs download into their own subfolder; the item's name stays the folder name.
+    @Test func playlistJobDownloadsIntoItsFolder() async throws {
+        let dir = tempDirectory()
+        let manager = makeManager(dir: dir, stub: try writeStub(mode: "ok"))
+        let job = MediaJob(sourceURL: URL(string: "https://youtube.com/playlist?list=X")!,
+                           formatSelector: "bv*[height<=720]+ba/b[height<=720]", title: "My List",
+                           audioOnly: false, playlist: true, playlistCount: 2, approxTotalBytes: 2000)
+        let id = manager.add(NewDownload(url: job.sourceURL, fileName: "My List", directory: dir,
+                                         category: .video, totalBytes: 2000, media: job))
+        try await waitUntil { manager.item(id)?.status == .completed }
+        let item = try #require(manager.item(id))
+        #expect(item.fileName == "My List")   // the folder, not a video file
+        var isDirectory: ObjCBool = false
+        #expect(FileManager.default.fileExists(atPath: item.fileURL.path, isDirectory: &isDirectory) && isDirectory.boolValue)
+        // The stub wrote its single file inside the playlist folder.
+        let contents = try FileManager.default.contentsOfDirectory(atPath: item.fileURL.path)
+        #expect(contents.count == 1)
+
+        // Redownload removes the whole folder's contents and starts over.
+        manager.redownload(id)
+        try await waitUntil { manager.item(id)?.status == .completed }
+        #expect(manager.item(id)?.status == .completed)
+    }
+
     @Test func missingToolsFailTheItemWithAGuide() async throws {
         let dir = tempDirectory()
         let manager = makeManager(dir: dir, stub: dir.appendingPathComponent("missing"))

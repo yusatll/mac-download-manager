@@ -59,9 +59,35 @@ public struct YTDLPInfo: Sendable, Equatable, Decodable {
     public var isLive: Bool
     /// Direct-file results (no `formats` array) keep their single format at the top level.
     public var topLevelFormat: Format?
+    /// Set when the JSON is a playlist (`_type: "playlist"`): its own title and the
+    /// (flat) entries. Flat entries carry id/title/duration but no formats.
+    public var playlistTitle: String?
+    public var flatEntries: [FlatEntry]
+
+    /// One entry of a `--flat-playlist` result.
+    public struct FlatEntry: Decodable, Sendable, Equatable {
+        public var id: String?
+        public var title: String?
+        public var duration: Double?
+        public var url: String?
+
+        enum CodingKeys: String, CodingKey { case id, title, duration, url }
+
+        public init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            id = try c.decodeIfPresent(String.self, forKey: .id)
+            title = try c.decodeIfPresent(String.self, forKey: .title)
+            duration = try c.decodeIfPresent(Double.self, forKey: .duration)
+            url = try c.decodeIfPresent(String.self, forKey: .url)
+        }
+    }
+
+    public var isPlaylist: Bool { !flatEntries.isEmpty || playlistCount != nil }
+    public var playlistCount: Int?
 
     enum CodingKeys: String, CodingKey {
-        case title, duration, uploader, formats, entries, url
+        case title, duration, uploader, formats, entries, url, _type
+        case playlistCount = "playlist_count"
         case isLive = "live_status"
         case id = "format_id", ext, vcodec, acodec, height
         case filesize, filesizeApprox = "filesize_approx", tbr
@@ -79,8 +105,20 @@ public struct YTDLPInfo: Sendable, Equatable, Decodable {
         default: isLive = false
         }
         var topLevelFormat: Format?
-        // A playlist JSON wraps videos in `entries`; with --no-playlist HDM shows the first video (§8.3).
-        if formats.isEmpty, let entries = try c.decodeIfPresent([YTDLPInfo].self, forKey: .entries), let first = entries.first {
+        var playlistTitle: String?
+        var flatEntries: [FlatEntry] = []
+        var playlistCount = try c.decodeIfPresent(Int.self, forKey: .playlistCount)
+
+        if let type = try c.decodeIfPresent(String.self, forKey: ._type), type == "playlist" {
+            playlistTitle = title
+            if let entries = try c.decodeIfPresent([FlatEntry].self, forKey: .entries) {
+                flatEntries = entries
+                if playlistCount == nil { playlistCount = entries.count }
+            }
+            if title == nil, let first = flatEntries.first { title = first.title }
+            duration = flatEntries.compactMap(\.duration).reduce(0, +)
+        } else if formats.isEmpty, let entries = try c.decodeIfPresent([YTDLPInfo].self, forKey: .entries), let first = entries.first {
+            // A playlist JSON wraps videos in `entries`; with --no-playlist HDM shows the first video (§8.3).
             title = first.title ?? title   // the entry is what gets downloaded; prefer its metadata
             duration = first.duration ?? duration
             uploader = first.uploader ?? uploader
@@ -103,16 +141,21 @@ public struct YTDLPInfo: Sendable, Equatable, Decodable {
             }
         }
         self.init(title: title, duration: duration, uploader: uploader, formats: formats,
-                  topLevelFormat: topLevelFormat, isLive: isLive)
+                  topLevelFormat: topLevelFormat, isLive: isLive,
+                  playlistTitle: playlistTitle, flatEntries: flatEntries, playlistCount: playlistCount)
     }
 
-    init(title: String?, duration: Double?, uploader: String?, formats: [Format], topLevelFormat: Format?, isLive: Bool) {
+    init(title: String?, duration: Double?, uploader: String?, formats: [Format], topLevelFormat: Format?, isLive: Bool,
+         playlistTitle: String? = nil, flatEntries: [FlatEntry] = [], playlistCount: Int? = nil) {
         self.title = title
         self.duration = duration
         self.uploader = uploader
         self.formats = formats
         self.topLevelFormat = topLevelFormat
         self.isLive = isLive
+        self.playlistTitle = playlistTitle
+        self.flatEntries = flatEntries
+        self.playlistCount = playlistCount
     }
 
     /// All playable formats: the `formats` array, or the single top-level format of a direct file.

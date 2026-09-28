@@ -4,15 +4,23 @@ import SwiftUI
 
 /// Quality picker for video links (spec §8.2 in-app variant): a yt-dlp query fills the list
 /// ("1080p · MP4 · ~450 MB", "Audio only · M4A", …) and the choice becomes a media download.
-/// When the URL turns out not to be a video page, the user can fall back to a regular download.
+/// Playlist URLs list every entry and download the whole list into one folder. When the URL
+/// turns out not to be a video page, the user can fall back to a regular download.
 struct VideoInfoView: View {
     @Environment(AppModel.self) private var model
     let pending: PendingDownload
     let close: () -> Void
 
+    /// Playlist summary when the link points at a whole playlist.
+    struct PlaylistSummary: Equatable {
+        var title: String
+        var count: Int
+        var totalDuration: Double?
+    }
+
     private enum QueryState {
         case loading
-        case loaded(VideoInfo)
+        case loaded(VideoInfo, PlaylistSummary?)
         case failed(String, allowsFileFallback: Bool)
     }
 
@@ -41,8 +49,8 @@ struct VideoInfoView: View {
                 }
                 .frame(maxWidth: .infinity, minHeight: 120, alignment: .center)
                 .padding(.vertical, 30)
-            case .loaded(let info):
-                loadedView(info)
+            case .loaded(let info, let playlist):
+                loadedView(info, playlist)
             case .failed(let message, let allowsFallback):
                 VStack(alignment: .leading, spacing: 12) {
                     Label(message, systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
@@ -65,9 +73,11 @@ struct VideoInfoView: View {
                 }
                 Spacer()
                 Button("Cancel", role: .cancel) { close() }.keyboardShortcut(.cancelAction)
-                if case .loaded = state {
+                if case .loaded(_, let playlist) = state {
                     Button("Download Later") { submit(start: false) }.disabled(selection == nil || name.isEmpty)
-                    Button("Start Download") { submit(start: true) }.keyboardShortcut(.defaultAction)
+                    Button(playlist.map { String(localized: "Start Download (\($0.count) videos)") }
+                           ?? String(localized: "Start Download")) { submit(start: true) }
+                        .keyboardShortcut(.defaultAction)
                         .disabled(selection == nil || name.isEmpty)
                 }
             }
@@ -82,26 +92,33 @@ struct VideoInfoView: View {
         switch state {
         case .loading: return "loading"
         case .failed(let message, _): return "failed-\(message.isEmpty)"
-        case .loaded(let info): return "loaded-\(info.options.count)-\(category)"
+        case .loaded(let info, let playlist): return "loaded-\(info.options.count)-\(category)-\(playlist?.count ?? 0)"
         }
     }
 
     // MARK: - Loaded
 
-    private func loadedView(_ info: VideoInfo) -> some View {
+    private func loadedView(_ info: VideoInfo, _ playlist: PlaylistSummary?) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 14) {
                 Image(systemName: "film").resizable().scaledToFit().frame(width: 44, height: 44)
                     .foregroundStyle(.tint).padding(2)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(info.title).font(.title3).fontWeight(.semibold).lineLimit(2)
+                    Text(playlist?.title ?? info.title).font(.title3).fontWeight(.semibold).lineLimit(2)
                     HStack(spacing: 8) {
-                        if info.isLive { Text("LIVE").font(.caption.bold()).foregroundStyle(.red) }
-                        if let duration = info.duration, !info.isLive {
-                            Text(Format.duration(duration)).foregroundStyle(.secondary)
-                        }
-                        if let uploader = info.uploader {
-                            Text(uploader).lineLimit(1).truncationMode(.tail).foregroundStyle(.secondary)
+                        if let playlist {
+                            Label(String(localized: "\(playlist.count) videos"), systemImage: "list.bullet")
+                            if let total = playlist.totalDuration, total > 0 {
+                                Text(Format.duration(total)).foregroundStyle(.secondary)
+                            }
+                        } else {
+                            if info.isLive { Text("LIVE").font(.caption.bold()).foregroundStyle(.red) }
+                            if let duration = info.duration, !info.isLive {
+                                Text(Format.duration(duration)).foregroundStyle(.secondary)
+                            }
+                            if let uploader = info.uploader {
+                                Text(uploader).lineLimit(1).truncationMode(.tail).foregroundStyle(.secondary)
+                            }
                         }
                     }
                     .font(.callout)
@@ -138,6 +155,10 @@ struct VideoInfoView: View {
                     Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
                     Toggle("Remember this folder for this category", isOn: $rememberFolder).disabled(!userChoseFolder)
                 }
+            }
+            if playlist != nil {
+                Text("The selected quality is applied to every video in the playlist.")
+                    .font(.callout).foregroundStyle(.secondary)
             }
             Text("Quality:").foregroundStyle(.secondary)
             qualityList(info.options)
@@ -201,6 +222,15 @@ struct VideoInfoView: View {
         }
     }
 
+    /// `watch?v=…&list=…` keeps the single video; a pure playlist link lists the whole playlist.
+    private static func looksLikePlaylist(_ url: URL) -> Bool {
+        let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        let names = (components?.queryItems ?? []).map { $0.name.lowercased() }
+        let hasList = names.contains("list")
+        let hasVideo = names.contains("v")
+        return (hasList && !hasVideo) || url.path.hasPrefix("/playlist")
+    }
+
     private func query() async {
         let tools = ComponentLocator.locate()
         ffmpegAvailable = tools.ffmpeg != nil
@@ -209,20 +239,14 @@ struct VideoInfoView: View {
             return
         }
         do {
-            let info = try await YTDLPRunner.query(pageURL: pending.url, headers: pending.headers, tools: tools)
-            let video = FormatMapper.videoInfo(from: info,
-                                               preferQuickTimeCompatible: model.settings.settings.preferQuickTimeCompatible)
-            guard !video.options.isEmpty else {
-                state = .failed(String(localized: "No downloadable formats were found for this video."), allowsFileFallback: false)
-                return
+            if Self.looksLikePlaylist(pending.url), let summary = try await queryPlaylist(tools: tools) {
+                load(video: summary.video, playlist: summary.summary)
+            } else {
+                let info = try await YTDLPRunner.query(pageURL: pending.url, headers: pending.headers, tools: tools)
+                load(video: FormatMapper.videoInfo(from: info,
+                                                   preferQuickTimeCompatible: model.settings.settings.preferQuickTimeCompatible),
+                     playlist: nil)
             }
-            state = .loaded(video)
-            if !userEditedName { name = FilenameResolver.sanitize(video.title) }
-            let best = video.options.first { !$0.disabled(ffmpegAvailable: ffmpegAvailable) } ?? video.options[0]
-            selection = best.id
-            category = best.audioOnly ? .music : .video
-            userChoseCategory = false
-            directory = model.settings.settings.folder(for: category)
         } catch MediaQueryError.unsupportedURL {
             state = .failed(String(localized: "This site is not supported by yt-dlp."), allowsFileFallback: true)
         } catch MediaQueryError.timedOut {
@@ -236,17 +260,49 @@ struct VideoInfoView: View {
         }
     }
 
+    /// Flat listing (fast, no per-video metadata) plus a formats query for the first entry.
+    private func queryPlaylist(tools: ComponentPaths) async throws -> (video: VideoInfo, summary: PlaylistSummary)? {
+        let list = try await YTDLPRunner.query(pageURL: pending.url, tools: tools, flatPlaylist: true)
+        let count = list.playlistCount ?? list.flatEntries.count
+        guard count > 0, let first = list.flatEntries.first else { return nil }
+        let firstURL = first.url.flatMap(URL.init(string:))
+            ?? first.id.map { URL(string: "https://www.youtube.com/watch?v=\($0)")! }
+            ?? pending.url
+        let entryInfo = try await YTDLPRunner.query(pageURL: firstURL, tools: tools)
+        let video = FormatMapper.videoInfo(from: entryInfo,
+                                           preferQuickTimeCompatible: model.settings.settings.preferQuickTimeCompatible)
+        guard !video.options.isEmpty else { return nil }
+        let durations = list.flatEntries.compactMap(\.duration)
+        let summary = PlaylistSummary(title: list.playlistTitle ?? video.title, count: count,
+                                      totalDuration: durations.isEmpty ? nil : durations.reduce(0, +))
+        return (video, summary)
+    }
+
+    private func load(video: VideoInfo, playlist: PlaylistSummary?) {
+        state = .loaded(video, playlist)
+        if !userEditedName { name = FilenameResolver.sanitize(playlist?.title ?? video.title) }
+        let best = video.options.first { !$0.disabled(ffmpegAvailable: ffmpegAvailable) } ?? video.options[0]
+        selection = best.id
+        category = best.audioOnly ? .music : .video
+        userChoseCategory = false
+        directory = model.settings.settings.folder(for: category)
+    }
+
     private func submit(start: Bool) {
-        guard case .loaded(let info) = state,
+        guard case .loaded(let info, let playlist) = state,
               let option = info.options.first(where: { $0.id == selection && !$0.disabled(ffmpegAvailable: ffmpegAvailable) }) else { return }
         if rememberFolder, userChoseFolder { model.settings.settings.categoryFolders[category] = directory }
         let base = FilenameResolver.sanitize(name)
+        let isPlaylist = playlist != nil
+        // For playlists the per-entry estimate scales to the whole list.
+        let totalBytes = option.approxSize.flatMap { isPlaylist ? $0 * Int64(playlist!.count) : $0 }
         let job = MediaJob(sourceURL: pending.url, formatSelector: option.selector, sortSpec: option.sortSpec,
-                           title: info.title, audioOnly: option.audioOnly,
-                           approxTotalBytes: option.approxSize, headers: pending.headers)
+                           title: playlist?.title ?? info.title, audioOnly: option.audioOnly,
+                           playlist: isPlaylist, playlistCount: playlist?.count,
+                           approxTotalBytes: totalBytes, headers: pending.headers)
         let id = model.manager.add(NewDownload(url: pending.url, fileName: base, directory: directory, category: category,
                                                headers: pending.headers, pageURL: pending.pageURL, referrer: pending.referrer,
-                                               totalBytes: option.approxSize, autoStart: start, media: job))
+                                               totalBytes: totalBytes, autoStart: start, media: job))
         if start && model.settings.settings.showProgressWindow { model.windows.showProgress(id) }
         close()
     }

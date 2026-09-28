@@ -104,6 +104,21 @@ import Testing
         #expect(args[refererIndex + 3] == "Referer: https://example.com/watch")
     }
 
+    @Test func playlistArguments() {
+        var request = makeRequest()
+        request.playlist = true
+        request.directory = URL(fileURLWithPath: "/tmp/hdm/My List")
+        request.baseName = "%(playlist_index)03d - %(title).190B"
+        let args = MediaPlan.arguments(for: request)
+        #expect(args.contains("--yes-playlist"))
+        #expect(!args.contains("--no-playlist"))
+        #expect(arg(args, after: "-o") == "/tmp/hdm/My List/%(playlist_index)03d - %(title).190B.%(ext)s")
+
+        let single = MediaPlan.arguments(for: makeRequest())
+        #expect(single.contains("--no-playlist"))
+        #expect(!single.contains("--yes-playlist"))
+    }
+
     @Test func missingToolsOmitTheirFlags() {
         var request = makeRequest()
         request.tools = ComponentPaths(ytDLP: URL(fileURLWithPath: "/opt/bin/yt-dlp"))
