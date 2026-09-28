@@ -14,10 +14,11 @@ public struct NewDownload: Sendable {
     public var totalBytes: Int64?
     public var description: String
     public var autoStart: Bool
+    public var media: MediaJob?
 
     public init(url: URL, fileName: String, directory: URL, category: DownloadCategory, headers: [String: String] = [:],
                 pageURL: URL? = nil, referrer: URL? = nil, totalBytes: Int64? = nil, description: String = "",
-                autoStart: Bool = true) {
+                autoStart: Bool = true, media: MediaJob? = nil) {
         self.url = url
         self.fileName = fileName
         self.directory = directory
@@ -28,6 +29,7 @@ public struct NewDownload: Sendable {
         self.totalBytes = totalBytes
         self.description = description
         self.autoStart = autoStart
+        self.media = media
     }
 }
 
@@ -62,8 +64,16 @@ public final class DownloadManager {
         var task: Task<Void, Never>?
     }
 
+    private struct MediaRunning {
+        let engine: MediaEngine
+        let generation: Int
+        var meter = SpeedMeter()
+        var task: Task<Void, Never>?
+    }
+
     @ObservationIgnored private let store: DownloadStore
     @ObservationIgnored private var running: [UUID: Running] = [:]
+    @ObservationIgnored private var mediaRunning: [UUID: MediaRunning] = [:]
     @ObservationIgnored private var nextGeneration = 0
     @ObservationIgnored private let globalLimiter = SpeedLimiter(bytesPerSecond: 0)
     @ObservationIgnored private var saveTask: Task<Void, Never>?
@@ -71,13 +81,17 @@ public final class DownloadManager {
     @ObservationIgnored private var networkWasSatisfied: Bool?
     @ObservationIgnored private let minSegment: Int64
     @ObservationIgnored private let backoff: @Sendable (Int) -> TimeInterval
+    /// Where yt-dlp/ffmpeg/deno live; injectable so tests can point at a stub binary.
+    @ObservationIgnored private let mediaTools: @Sendable () -> ComponentPaths
 
     public init(store: DownloadStore, settings: SettingsStore, minSegment: Int64 = 1 << 20,
-                backoff: @escaping @Sendable (Int) -> TimeInterval = RetryPolicy.delay(forAttempt:)) {
+                backoff: @escaping @Sendable (Int) -> TimeInterval = RetryPolicy.delay(forAttempt:),
+                mediaTools: @escaping @Sendable () -> ComponentPaths = ComponentLocator.locate) {
         self.store = store
         self.settings = settings
         self.minSegment = minSegment
         self.backoff = backoff
+        self.mediaTools = mediaTools
         items = store.load().map { item in
             var item = item
             if item.status.isRunning { item.status = .paused }
@@ -116,10 +130,18 @@ public final class DownloadManager {
 
     @discardableResult
     public func add(_ new: NewDownload) -> UUID {
-        let item = DownloadItem(url: new.url, fileName: reserveName(FilenameResolver.sanitize(new.fileName), in: new.directory),
-                                saveDirectory: new.directory,
+        let fileName: String
+        if let job = new.media {
+            // yt-dlp owns the extension (`base.%(ext)s`); uniqueness is reserved on the base name.
+            let base = (FilenameResolver.sanitize(new.fileName) as NSString).deletingPathExtension
+            fileName = reserveMediaName(base, in: new.directory) + "." + (job.audioOnly ? "m4a" : "mp4")
+        } else {
+            fileName = reserveName(FilenameResolver.sanitize(new.fileName), in: new.directory)
+        }
+        let item = DownloadItem(url: new.url, fileName: fileName, saveDirectory: new.directory,
                                 category: new.category, headers: new.headers, pageURL: new.pageURL, referrer: new.referrer,
-                                totalBytes: new.totalBytes, userDescription: new.description, autoStart: new.autoStart)
+                                totalBytes: new.totalBytes, userDescription: new.description, autoStart: new.autoStart,
+                                media: new.media)
         items.append(item)
         scheduleSave()
         schedule()
@@ -162,6 +184,12 @@ public final class DownloadManager {
                     item.receivedBytes = segments.reduce(0) { $0 + $1.received }
                     item.status = .paused
                 }
+            } else if let run = mediaRunning.removeValue(forKey: id) {
+                run.task?.cancel()
+                live[id] = nil
+                await run.engine.pause()   // SIGINT; yt-dlp flushes its `.part` files before exiting
+                guard mediaRunning[id] == nil, item(id)?.status.isRunning == true else { continue }
+                update(id) { $0.status = .paused }
             } else {
                 update(id) { if $0.status == .queued { $0.status = .paused } }
             }
@@ -174,9 +202,10 @@ public final class DownloadManager {
         await pause(items.filter { $0.status.isRunning || $0.status == .queued }.map(\.id))
     }
 
-    /// Called on quit: stops running transfers and saves their exact segments. Queued items stay queued.
+    /// Called on quit: stops running transfers and saves their exact state. Queued items stay queued.
     public func prepareForTermination() async {
-        await pause(items.filter { running[$0.id] != nil }.map(\.id))
+        let busy = items.filter { running[$0.id] != nil || mediaRunning[$0.id] != nil }.map(\.id)
+        await pause(busy)
         flush()
     }
 
@@ -194,9 +223,14 @@ public final class DownloadManager {
                 run.task?.cancel()
                 Task { await run.download.cancel() }
             }
+            if let run = mediaRunning.removeValue(forKey: id) {
+                run.task?.cancel()
+                Task { await run.engine.cancel() }
+            }
             live[id] = nil
             guard let item = item(id) else { continue }
             try? fm.removeItem(at: item.partURL)
+            removeMediaArtifacts(of: item)
             if deleteFiles, item.status == .completed {
                 try? fm.trashItem(at: item.fileURL, resultingItemURL: nil)
             }
@@ -211,14 +245,46 @@ public final class DownloadManager {
     }
 
     public func redownload(_ id: UUID) {
+        live[id] = nil
         if let run = running.removeValue(forKey: id) {
             run.task?.cancel()
             Task { await run.download.cancel() }
+            update(id) { item in
+                try? FileManager.default.removeItem(at: item.partURL)
+                item.resetTransfer()
+                item.status = .queued
+                item.autoStart = true
+            }
+            scheduleSave()
+            schedule()
+        } else if let run = mediaRunning.removeValue(forKey: id) {
+            // Hold the item paused until the old process is dead, or two yt-dlp runs would share one `.part`.
+            run.task?.cancel()
+            update(id) { item in
+                item.resetTransfer()
+                item.status = .paused
+            }
+            Task { [weak self] in
+                await run.engine.cancel()
+                self?.redownloadMediaAfterCancel(id)
+            }
+        } else {
+            update(id) { item in
+                try? FileManager.default.removeItem(at: item.partURL)
+                removeMediaFiles(of: item)
+                item.resetTransfer()
+                item.status = .queued
+                item.autoStart = true
+            }
+            scheduleSave()
+            schedule()
         }
-        live[id] = nil
+    }
+
+    private func redownloadMediaAfterCancel(_ id: UUID) {
+        guard item(id) != nil else { return }
         update(id) { item in
-            try? FileManager.default.removeItem(at: item.partURL)
-            item.resetTransfer()
+            removeMediaFiles(of: item)   // yt-dlp would otherwise treat the old file as "already downloaded"
             item.status = .queued
             item.autoStart = true
         }
@@ -283,6 +349,21 @@ public final class DownloadManager {
         }
     }
 
+    /// Media names are unique on the extension-less base: `Title`, `Title (2)`, … so that
+    /// `Title.f137.mp4.part` and `Title.mp4` of two jobs never collide.
+    private func reserveMediaName(_ base: String, in directory: URL) -> String {
+        let fm = FileManager.default
+        let dir = directory.standardizedFileURL
+        return FilenameResolver.uniqueName(base) { candidate in
+            let ownBase = { (name: String) in (name as NSString).deletingPathExtension }
+            if items.contains(where: { $0.saveDirectory.standardizedFileURL == dir && ownBase($0.fileName) == candidate }) {
+                return true
+            }
+            guard let entries = try? fm.contentsOfDirectory(atPath: dir.path) else { return false }
+            return entries.contains { $0.hasPrefix(candidate + ".") }
+        }
+    }
+
     // MARK: Scheduling
 
     private func schedule() {
@@ -299,6 +380,10 @@ public final class DownloadManager {
 
     private func start(_ index: Int) {
         let item = items[index]
+        if item.kind == .media, let job = item.media {
+            startMedia(index, job: job)
+            return
+        }
         let s = settings.settings
         var resume: ResumeState?
         if item.resumable == true, let total = item.totalBytes, !item.segments.isEmpty {
@@ -332,6 +417,144 @@ public final class DownloadManager {
         running[id] = run
         onEvent?(.started(id))
         Task { await download.start() }
+    }
+
+    private func startMedia(_ index: Int, job: MediaJob) {
+        let item = items[index]
+        let tools = mediaTools()
+        guard let ytDLP = tools.ytDLP, FileManager.default.isExecutableFile(atPath: ytDLP.path) else {
+            items[index].status = .failed(.media("yt-dlp could not be found. Install it with: brew install yt-dlp"))
+            flush()
+            onEvent?(.failed(item.id))
+            return
+        }
+        if job.audioOnly, tools.ffmpeg == nil {
+            items[index].status = .failed(.media("ffmpeg is required for audio extraction. Install it with: brew install ffmpeg"))
+            flush()
+            onEvent?(.failed(item.id))
+            return
+        }
+        do {
+            try FileManager.default.createDirectory(at: item.saveDirectory, withIntermediateDirectories: true)
+        } catch {
+            items[index].status = .failed(.fileSystem(error.localizedDescription))
+            return
+        }
+        if let total = item.totalBytes, total > 0, Self.freeDiskSpace(on: item.saveDirectory) < total {
+            items[index].status = .failed(.diskFull)
+            flush()
+            onEvent?(.failed(item.id))
+            return
+        }
+        // One `-r` value instead of the HTTP stack of limiters; changes apply on the next run.
+        let global = settings.settings.globalSpeedLimit
+        let perItem = item.speedLimit ?? 0
+        let limit = global > 0 && perItem > 0 ? min(global, perItem) : max(global, perItem)
+        let request = MediaRequest(
+            sourceURL: job.sourceURL, formatSelector: job.formatSelector, sortSpec: job.sortSpec,
+            audioOnly: job.audioOnly, directory: item.saveDirectory,
+            baseName: (item.fileName as NSString).deletingPathExtension,
+            approxTotalBytes: item.totalBytes, headers: job.headers, tools: tools,
+            concurrentFragments: max(1, settings.settings.maxConnections), speedLimitBytesPerSecond: limit)
+        let engine = MediaEngine(request: request)
+        items[index].status = .connecting
+        items[index].lastTryAt = Date()
+        items[index].resumable = true
+        let id = item.id
+        nextGeneration += 1
+        let generation = nextGeneration
+        var run = MediaRunning(engine: engine, generation: generation)
+        run.task = Task { [weak self] in
+            for await event in engine.events { self?.handleMedia(event, for: id, generation: generation) }
+        }
+        mediaRunning[id] = run
+        onEvent?(.started(id))
+        Task { await engine.start() }
+    }
+
+    private func handleMedia(_ event: MediaEvent, for id: UUID, generation: Int) {
+        guard mediaRunning[id]?.generation == generation, let index = items.firstIndex(where: { $0.id == id }) else { return }
+        switch event {
+        case .progress(let received, let total):
+            items[index].receivedBytes = received
+            if let total { items[index].totalBytes = total }
+            if items[index].status == .connecting { items[index].status = .downloading }
+            mediaRunning[id]?.meter.add(bytes: received, at: ProcessInfo.processInfo.systemUptime)
+            let meter = mediaRunning[id]?.meter ?? SpeedMeter()
+            live[id] = LiveStats(bytesPerSecond: meter.bytesPerSecond,
+                                 secondsRemaining: meter.secondsRemaining(total: items[index].totalBytes, received: received),
+                                 connections: [])
+            scheduleSave()
+        case .postProcessing:
+            items[index].status = .merging
+            live[id] = nil
+            flush()
+        case .finished(let path, let total):
+            mediaRunning[id] = nil
+            live[id] = nil
+            if let path {
+                items[index].fileName = path.lastPathComponent
+                items[index].saveDirectory = path.deletingLastPathComponent()
+                if total > 0 { items[index].totalBytes = total }
+                items[index].receivedBytes = total > 0 ? total : items[index].receivedBytes
+            } else if total > 0 {
+                items[index].receivedBytes = total
+            }
+            finalizeMedia(index)
+            schedule()
+        case .failed(let reason):
+            mediaRunning[id] = nil
+            live[id] = nil
+            items[index].status = .failed(reason)
+            flush()
+            onEvent?(.failed(id))
+            schedule()
+        }
+    }
+
+    private func finalizeMedia(_ index: Int) {
+        var item = items[index]
+        Self.markQuarantined(item.fileURL, source: item.url, page: item.pageURL ?? item.referrer)
+        item.status = .completed
+        item.completedAt = Date()
+        item.awaitingRefresh = false
+        if let size = try? item.fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize, Int64(size) > item.receivedBytes {
+            item.totalBytes = Int64(size)
+            item.receivedBytes = Int64(size)
+        }
+        items[index] = item
+        flush()
+        onEvent?(.completed(item.id))
+    }
+
+    /// yt-dlp's partial files for one job: `base.f137.mp4.part`, `base.mp4.part`, `base.ytdl`, …
+    private func removeMediaArtifacts(of item: DownloadItem) {
+        guard item.kind == .media else { return }
+        let fm = FileManager.default
+        let base = (item.fileName as NSString).deletingPathExtension
+        guard let entries = try? fm.contentsOfDirectory(atPath: item.saveDirectory.path) else { return }
+        for entry in entries where entry.hasPrefix(base + ".") {
+            let ext = (entry as NSString).pathExtension.lowercased()
+            if ext == "part" || ext == "ytdl" || ext == "temp" || ext.hasPrefix("part-") {
+                try? fm.removeItem(at: item.saveDirectory.appendingPathComponent(entry))
+            }
+        }
+    }
+
+    /// All files of a media job, finished ones included (used by redownload).
+    private func removeMediaFiles(of item: DownloadItem) {
+        guard item.kind == .media else { return }
+        let fm = FileManager.default
+        let base = (item.fileName as NSString).deletingPathExtension
+        guard let entries = try? fm.contentsOfDirectory(atPath: item.saveDirectory.path) else { return }
+        for entry in entries where entry.hasPrefix(base + ".") {
+            try? fm.removeItem(at: item.saveDirectory.appendingPathComponent(entry))
+        }
+    }
+
+    private static func freeDiskSpace(on url: URL) -> Int64 {
+        (try? url.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
+            .volumeAvailableCapacityForImportantUsage) ?? .max
     }
 
     private func handle(_ event: DownloadEvent, for id: UUID, generation: Int) {

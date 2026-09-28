@@ -20,6 +20,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var keepInMenuBar = true
     public var preventSleep = true
     public var conflictPolicy: ConflictPolicy = .rename
+    /// Prefer H.264/AAC formats so downloads open in QuickTime (spec §8.3).
+    public var preferQuickTimeCompatible = true
 
     public static let defaultBaseFolder = FileManager.default
         .urls(for: .downloadsDirectory, in: .userDomainMask)[0]
@@ -64,5 +66,6 @@ public struct AppSettings: Codable, Equatable, Sendable {
         keepInMenuBar = try c.decodeIfPresent(Bool.self, forKey: .keepInMenuBar) ?? d.keepInMenuBar
         preventSleep = try c.decodeIfPresent(Bool.self, forKey: .preventSleep) ?? d.preventSleep
         conflictPolicy = try c.decodeIfPresent(ConflictPolicy.self, forKey: .conflictPolicy) ?? d.conflictPolicy
+        preferQuickTimeCompatible = try c.decodeIfPresent(Bool.self, forKey: .preferQuickTimeCompatible) ?? d.preferQuickTimeCompatible
     }
 }

@@ -3,6 +3,8 @@ import HDMCore
 
 @MainActor
 final class CaptureCoordinator {
+    private enum Route { case file, media }
+
     unowned let model: AppModel
 
     init(model: AppModel) {
@@ -11,10 +13,33 @@ final class CaptureCoordinator {
 
     func handle(_ pending: PendingDownload) {
         guard ["http", "https"].contains(pending.url.scheme?.lowercased() ?? "") else { return }
-        if model.settings.settings.startWithoutDialog {
-            Task { await startImmediately(pending) }
-        } else {
-            model.windows.showDownloadInfo(pending)
+        switch route(for: pending) {
+        case .media:
+            model.windows.showVideoInfo(pending)
+        case .file:
+            if model.settings.settings.startWithoutDialog {
+                Task { await startImmediately(pending) }
+            } else {
+                model.windows.showDownloadInfo(pending)
+            }
+        }
+    }
+
+    /// Video links open the quality picker instead of downloading HTML (spec §8.3): links with a
+    /// captured file extension stay with the HTTP engine, manifests and video pages go to yt-dlp.
+    private func route(for pending: PendingDownload) -> Route {
+        let url = pending.url
+        let ext = url.pathExtension.lowercased()
+        if !ext.isEmpty {
+            if MediaSites.streamExtensions.contains(ext) { return .media }
+            if model.settings.settings.captureExtensions.contains(ext) { return .file }
+            return .file   // any other extension looks like a direct file
+        }
+        switch pending.source {
+        case .clipboard, .browser:
+            return MediaSites.isKnownVideoSite(url) ? .media : .file
+        case .manual, .drop:
+            return .media   // deliberate user action: probe; the dialog offers a file-download fallback
         }
     }
 

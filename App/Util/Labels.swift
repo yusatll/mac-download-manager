@@ -49,6 +49,7 @@ extension FailureReason {
         case .serverFileChanged: String(localized: "The file on the server has changed. Restart the download.")
         case .diskFull: String(localized: "There is not enough disk space.")
         case .fileSystem(let detail): String(localized: "File error: \(detail)")
+        case .media(let detail): String(localized: "Video download error: \(detail)")
         }
     }
 }

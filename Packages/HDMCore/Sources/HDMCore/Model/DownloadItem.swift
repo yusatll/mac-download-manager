@@ -11,6 +11,8 @@ public enum FailureReason: Codable, Hashable, Sendable {
     case serverFileChanged
     case diskFull
     case fileSystem(String)
+    /// yt-dlp failed (bad link, site broke, missing tool, …); the message is yt-dlp's last error line.
+    case media(String)
 }
 
 public enum DownloadStatus: Codable, Hashable, Sendable {
@@ -62,13 +64,15 @@ public struct DownloadItem: Codable, Identifiable, Hashable, Sendable {
     public var completedAt: Date?
     public var userDescription: String
     public var awaitingRefresh: Bool
+    /// Set when `kind` is `.media`: everything yt-dlp needs to run and re-run the job (spec §8.3).
+    public var media: MediaJob?
 
     public init(id: UUID = UUID(), url: URL, fileName: String, saveDirectory: URL, category: DownloadCategory,
                 headers: [String: String] = [:], pageURL: URL? = nil, referrer: URL? = nil,
                 totalBytes: Int64? = nil, userDescription: String = "", autoStart: Bool = true,
-                createdAt: Date = Date()) {
+                createdAt: Date = Date(), media: MediaJob? = nil) {
         self.id = id
-        self.kind = .http
+        self.kind = media == nil ? .http : .media
         self.url = url
         self.pageURL = pageURL
         self.referrer = referrer
@@ -85,6 +89,7 @@ public struct DownloadItem: Codable, Identifiable, Hashable, Sendable {
         self.createdAt = createdAt
         self.userDescription = userDescription
         self.awaitingRefresh = false
+        self.media = media
     }
 
     public var fileURL: URL { saveDirectory.appendingPathComponent(fileName, isDirectory: false) }

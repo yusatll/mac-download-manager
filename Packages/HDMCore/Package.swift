@@ -11,6 +11,7 @@ let package = Package(
     targets: [
         .target(name: "HDMCore"),
         .target(name: "HDMTestSupport"),
-        .testTarget(name: "HDMCoreTests", dependencies: ["HDMCore", "HDMTestSupport"]),
+        .testTarget(name: "HDMCoreTests", dependencies: ["HDMCore", "HDMTestSupport"],
+                    resources: [.copy("Fixtures")]),
     ]
 )

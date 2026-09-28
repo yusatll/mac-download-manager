@@ -15,6 +15,13 @@ extension WindowCoordinator {
         }
     }
 
+    func showVideoInfo(_ pending: PendingDownload) {
+        let key = "video-\(pending.id.uuidString)"
+        show(key: key, title: String(localized: "Download Video")) {
+            VideoInfoView(pending: pending, close: { [weak self] in self?.close(key: key) })
+        }
+    }
+
     func showProgress(_ id: UUID) {
         show(key: Self.progressKey(id), title: model.manager.item(id)?.fileName ?? "") {
             ProgressWindowView(id: id)

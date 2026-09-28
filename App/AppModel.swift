@@ -28,7 +28,9 @@ final class AppModel {
         notifier.requestAuthorization()
         clipboard = ClipboardMonitor(
             isEnabled: { [unowned self] in settings.settings.clipboardMonitoring },
-            shouldCapture: { [unowned self] url in settings.settings.shouldCapture(fileName: url.lastPathComponent) },
+            shouldCapture: { [unowned self] url in
+                settings.settings.shouldCapture(fileName: url.lastPathComponent) || MediaSites.isKnownVideoSite(url)
+            },
             onURL: { [unowned self] url in capture.handle(PendingDownload(url: url, source: .clipboard)) })
         clipboard?.start()
         ticker = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in

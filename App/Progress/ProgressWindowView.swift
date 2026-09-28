@@ -42,7 +42,7 @@ struct ProgressWindowView: View {
             }
 
             HStack {
-                if tab == 0 {
+                if tab == 0, manager.item(id)?.kind == .http {
                     Button(showDetails ? "Hide details" : "Show details") { showDetails.toggle() }
                 }
                 Spacer()
@@ -74,11 +74,13 @@ struct ProgressWindowView: View {
                 row("Resume capability:", resumeText(item))
             }
             ProgressView(value: item.fractionCompleted ?? 0)
-            SegmentBar(segments: item.segments, total: item.totalBytes,
-                       activeSegments: Set(stats?.connections.map(\.segmentIndex) ?? []))
-                .frame(height: 14)
-            if showDetails {
-                ConnectionList(connections: stats?.connections ?? [])
+            if item.kind == .http {
+                SegmentBar(segments: item.segments, total: item.totalBytes,
+                           activeSegments: Set(stats?.connections.map(\.segmentIndex) ?? []))
+                    .frame(height: 14)
+                if showDetails {
+                    ConnectionList(connections: stats?.connections ?? [])
+                }
             }
         }
     }
@@ -102,10 +104,11 @@ struct ProgressWindowView: View {
     }
 
     private func resumeText(_ item: DownloadItem) -> String {
+        if item.kind == .media { return String(localized: "Yes") }
         switch item.resumable {
-        case true?: String(localized: "Yes")
-        case false?: String(localized: "No")
-        case nil: String(localized: "Unknown")
+        case true?: return String(localized: "Yes")
+        case false?: return String(localized: "No")
+        case nil: return String(localized: "Unknown")
         }
     }
 }

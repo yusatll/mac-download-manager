@@ -145,6 +145,26 @@
         }
       }
     },
+    "Check Again": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yeniden Denetle"
+          }
+        }
+      }
+    },
+    "Checking…": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Denetleniyor…"
+          }
+        }
+      }
+    },
     "Choose…": {
       "localizations": {
         "tr": {
@@ -345,6 +365,26 @@
         }
       }
     },
+    "Download Video": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video İndir"
+          }
+        }
+      }
+    },
+    "Download as Regular File": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Normal Dosya Olarak İndir"
+          }
+        }
+      }
+    },
     "Download complete": {
       "localizations": {
         "tr": {
@@ -505,6 +545,16 @@
         }
       }
     },
+    "Formats": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Biçimler"
+          }
+        }
+      }
+    },
     "General": {
       "localizations": {
         "tr": {
@@ -525,12 +575,42 @@
         }
       }
     },
+    "Getting the video information timed out. Try again.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video bilgisi alma zaman aşımına uğradı. Tekrar deneyin."
+          }
+        }
+      }
+    },
+    "Getting video information…": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video bilgisi alınıyor…"
+          }
+        }
+      }
+    },
     "HDM is waiting for a new link for this download. Use this address and continue where it left off?": {
       "localizations": {
         "tr": {
           "stringUnit": {
             "state": "translated",
             "value": "HDM bu indirme için yeni bir link bekliyor. Bu adres kullanılıp kaldığı yerden devam edilsin mi?"
+          }
+        }
+      }
+    },
+    "Helper programs": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yardımcı programlar"
           }
         }
       }
@@ -584,6 +664,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "HDM'yi menü çubuğunda tut"
+          }
+        }
+      }
+    },
+    "LIVE": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CANLI"
           }
         }
       }
@@ -738,6 +828,26 @@
         }
       }
     },
+    "No downloadable formats were found for this video.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu video için indirilebilir biçim bulunamadı."
+          }
+        }
+      }
+    },
+    "Not found": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bulunamadı"
+          }
+        }
+      }
+    },
     "OK": {
       "localizations": {
         "tr": {
@@ -868,6 +978,16 @@
         }
       }
     },
+    "Prefer QuickTime-compatible formats (H.264/AAC)": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "QuickTime uyumlu biçimleri tercih et (H.264/AAC)"
+          }
+        }
+      }
+    },
     "Prevent sleep while downloading": {
       "localizations": {
         "tr": {
@@ -894,6 +1014,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Özellikler…"
+          }
+        }
+      }
+    },
+    "Quality:": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalite:"
           }
         }
       }
@@ -1378,6 +1508,16 @@
         }
       }
     },
+    "This address is not a video page HDM recognises. You can download it as a regular file instead.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu adres, HDM’nin tanıdığı bir video sayfası değil. Bunun yerine normal dosya olarak indirebilirsiniz."
+          }
+        }
+      }
+    },
     "This download cannot be resumed": {
       "localizations": {
         "tr": {
@@ -1394,6 +1534,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bu indirme kaldırıldı."
+          }
+        }
+      }
+    },
+    "This site is not supported by yt-dlp.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu site yt-dlp tarafından desteklenmiyor."
           }
         }
       }
@@ -1538,6 +1688,16 @@
         }
       }
     },
+    "Video download error: %@": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video indirme hatası: %@"
+          }
+        }
+      }
+    },
     "Waiting for a new link": {
       "localizations": {
         "tr": {
@@ -1584,6 +1744,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Evet"
+          }
+        }
+      }
+    },
+    "brew install %@": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "brew install %@"
+          }
+        }
+      }
+    },
+    "yt-dlp is not installed. Install it with: brew install yt-dlp": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "yt-dlp kurulu değil. Şu komutla kurun: brew install yt-dlp"
           }
         }
       }
