@@ -93,6 +93,23 @@ import Testing
         #expect(outBack.mediaQuery?.formats.first?.id == "1080p")
     }
 
+    @Test func mediaQueryCarriesEmbedsAndFrameURLs() throws {
+        let json = #"""
+        {"v":1,"id":"m2","type":"mediaQuery","pageUrl":"https://site.com/posts/2",
+         "embeds":["https://fast.wistia.net/embed/iframe/m3m3xookbb","javascript:alert(1)","file:///etc/passwd"],
+         "streams":[{"url":"https://w.com/d.bin","kind":"file","mime":"video/mp4","frameUrl":"https://fast.wistia.net/embed/iframe/x"},
+                    {"url":"file:///etc/passwd","kind":"file"}]}
+        """#
+        let message = try IPCFrame.decode(IPCMessage.self, from: Data(json.utf8))
+        guard case .mediaQuery(let query) = message.payload else {
+            Issue.record("expected mediaQuery payload")
+            return
+        }
+        #expect(query.embeds == [URL(string: "https://fast.wistia.net/embed/iframe/m3m3xookbb")!], "only http(s) embeds survive")
+        #expect(query.streams.map(\.url) == [URL(string: "https://w.com/d.bin")!], "only http(s) streams survive")
+        #expect(query.streams.first?.frameUrl == URL(string: "https://fast.wistia.net/embed/iframe/x"))
+    }
+
     @Test func mediaDownloadIgnoresClientSidePaths() throws {
         // The extension may never pick the destination (spec §10).
         let json = #"{"v":1,"id":"d1","type":"mediaDownload","queryId":"q","formatId":"720p","saveTo":"/etc"}"#

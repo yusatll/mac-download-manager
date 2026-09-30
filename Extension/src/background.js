@@ -26,6 +26,29 @@ function detectBrowser() {
   return 'chrome';
 }
 
+/** `name=value; …` for every cookie the browser would send to `url` (HttpOnly included). */
+async function cookieHeader(url) {
+  try {
+    const jar = await B.cookies.getAll({ url });
+    return jar.map((cookie) => `${cookie.name}=${cookie.value}`).join('; ');
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Video queries need the page's cookies (members-only pages such as Kajabi courses redirect
+ * yt-dlp to a login page without them) and every stream the tab has produced so far.
+ */
+async function enrichMediaQuery(message, tabId) {
+  const enriched = Object.assign({}, message);
+  if (!enriched.cookies && HDM.isHttpUrl(enriched.pageUrl)) {
+    enriched.cookies = (await cookieHeader(enriched.pageUrl)) || undefined;
+  }
+  enriched.streams = HDM.mergeStreams(enriched.streams || [], tabId != null ? tabMedia(tabId) : []);
+  return enriched;
+}
+
 function sendNative(message) {
   return new Promise((resolve) => {
     try {
@@ -207,7 +230,7 @@ function storeMedia(tabId, streams, frameUrl) {
   const current = state.mediaByTab.get(tabId) || [];
   const seen = new Set(current.map((item) => item.url));
   for (const stream of streams) {
-    const kind = HDM.classifyMediaUrl(stream.url);
+    const kind = HDM.classifyMedia(stream.url, stream.mime);
     if (!kind || seen.has(stream.url)) continue;
     current.push({ url: stream.url, kind, mime: stream.mime, frameUrl: stream.frameUrl || frameUrl });
     seen.add(stream.url);
@@ -215,6 +238,18 @@ function storeMedia(tabId, streams, frameUrl) {
   if (current.length > 50) current.splice(0, current.length - 50);
   state.mediaByTab.set(tabId, current);
 }
+
+// Chrome/Brave (spec §8.1): streams whose URL has no media extension are recognised by their
+// Content-Type, e.g. Wistia's …/deliveries/<id>.bin (video/mp4) or extensionless HLS playlists.
+if (B.webRequest && B.webRequest.onResponseStarted) try {   // Safari may not offer responseHeaders
+  B.webRequest.onResponseStarted.addListener((details) => {
+    if (details.tabId == null || details.tabId < 0) return;
+    const header = (details.responseHeaders || []).find((h) => h.name && h.name.toLowerCase() === 'content-type');
+    const mime = header && header.value ? header.value : '';
+    if (!HDM.classifyMedia(details.url, mime)) return;
+    storeMedia(details.tabId, [{ url: details.url, mime, frameUrl: details.documentUrl || details.initiator }], details.initiator);
+  }, { urls: ['<all_urls>'], types: ['media', 'xmlhttprequest', 'other'] }, ['responseHeaders']);
+} catch { /* content-script detection still works */ }
 
 B.tabs && B.tabs.onRemoved.addListener((tabId) => {
   state.mediaByTab.delete(tabId);
@@ -252,8 +287,13 @@ B.runtime.onMessage.addListener((message, sender, sendResponse) => {
           const tabId = message.tabId != null ? message.tabId : (sender.tab && sender.tab.id);
           return sendResponse({ ok: true, media: tabMedia(tabId), drm: state.drmTabs.has(tabId) });
         }
-        case 'native':
-          return sendResponse(await sendNative(message.message));
+        case 'native': {
+          let outgoing = message.message;
+          if (outgoing && outgoing.type === 'mediaQuery') {
+            outgoing = await enrichMediaQuery(outgoing, sender.tab && sender.tab.id);
+          }
+          return sendResponse(await sendNative(outgoing));
+        }
         default:
           return sendResponse({ ok: false, error: 'unknown_message' });
       }

@@ -66,7 +66,7 @@
     if (flushTimer) return;
     flushTimer = setTimeout(() => {
       flushTimer = null;
-      const streams = Array.from(foundStreams.values()).filter((stream) => HDM.classifyMediaUrl(stream.url));
+      const streams = Array.from(foundStreams.values()).filter((stream) => HDM.classifyMedia(stream.url, stream.mime));
       if (streams.length) send({ type: 'mediaFound', streams });
     }, 1500);
   }
@@ -196,8 +196,10 @@
     const reply = await send({ type: 'native', message: HDM.makeMessage('mediaQuery', {
       pageUrl: location.href,
       title: document.title || '',
-      streams: Array.from(foundStreams.values()),
-      referrer: document.referrer || location.href,
+      // The background adds the tab's cookies and the streams found in every frame.
+      streams: Array.from(foundStreams.values()).map((stream) => Object.assign({ frameUrl: location.href }, stream)),
+      embeds: pageEmbeds(),
+      referrer: location.href,
       userAgent: navigator.userAgent,
     }) });
     if (!panel.isConnected) return;
@@ -228,6 +230,14 @@
       });
       panel.append(row);
     }
+  }
+
+  /** Player pages embedded here (iframes, Wistia's JS embed) that yt-dlp can resolve itself. */
+  function pageEmbeds() {
+    const iframeSrcs = Array.from(document.querySelectorAll('iframe[src]'), (frame) => frame.src);
+    const classNames = Array.from(document.querySelectorAll('[class*="wistia_async_"]'), (element) => String(element.className));
+    const scriptSrcs = Array.from(document.querySelectorAll('script[src*="wistia"]'), (script) => script.src);
+    return HDM.embedCandidates({ iframeSrcs, classNames, scriptSrcs });
   }
 
   function humanSize(bytes) {

@@ -121,51 +121,76 @@ final class BrowserCoordinator {
     private func mediaQuery(_ query: MediaQueryIn, id: String) async -> IPCResponse {
         let tools = ComponentLocator.locate()
         guard tools.ytDLP != nil else {
-            return IPCResponse(id: id, ok: false, error: "yt-dlp is not installed. Install it with: brew install yt-dlp")
+            return IPCResponse(id: id, ok: false, error: String(localized: "yt-dlp is not installed. Install it with: brew install yt-dlp"))
         }
-        var headers = headerDict(cookies: query.cookies, userAgent: query.userAgent)
+        let headers = headerDict(cookies: query.cookies, userAgent: query.userAgent)
 
-        // Direct media files never reach yt-dlp (spec §8.3.3): one row, downloaded by the HTTP engine.
-        if query.streams.allSatisfy({ $0.kind == .file }), let file = query.streams.first, query.streams.count == 1 {
-            let name = FilenameResolver.resolve(suggested: query.title, url: file.url)
-            let format = MediaQueryOut.Format(id: "file", label: "Original", ext: (file.url.pathExtension).uppercased(),
-                                              approxSize: nil, note: nil)
-            let queryId = UUID().uuidString
-            queries[queryId] = MediaQueryEntry(
-                sourceURL: file.url, headers: headers,
-                title: FilenameResolver.sanitize(name),
-                options: [MediaFormatOption(label: "Original", selector: "", ext: file.url.pathExtension, audioOnly: false, height: nil)])
-            queryDates[queryId] = Date()
-            return IPCResponse(id: id, mediaQuery: MediaQueryOut(queryId: queryId, title: query.title ?? name, formats: [format]))
+        // yt-dlp first (quality list): the page with the browser's cookies, then embedded players
+        // (e.g. Kajabi's Wistia embed), then HLS/DASH streams seen in any frame of the tab.
+        let hints = MediaHints(
+            pageURL: query.pageUrl, embeds: query.embeds,
+            streams: query.streams.map {
+                MediaHints.Stream(url: $0.url, kind: MediaHints.Stream.Kind(rawValue: $0.kind.rawValue) ?? .file,
+                                  frameURL: $0.frameUrl ?? query.referrer)
+            })
+        let outcome = await MediaResolver.resolve(MediaResolver.candidates(for: hints, headers: headers)) { candidate in
+            try await YTDLPRunner.query(pageURL: candidate.url, headers: candidate.headers, tools: tools)
         }
 
-        // Page URL first; a direct stream URL is the fallback when the page is unsupported.
-        var info: YTDLPInfo?
-        if let page = try? await YTDLPRunner.query(pageURL: query.pageUrl, headers: headers, tools: tools) {
-            info = page
-        } else if let stream = query.streams.first(where: { $0.kind == .hls || $0.kind == .dash })
-                    ?? query.streams.first {
-            if let referrer = query.referrer {
-                headers["Referer"] = referrer.absoluteString
-                headers["Origin"] = referrer.scheme! + "://" + (referrer.host() ?? "")
+        let resolved: ResolvedMedia
+        switch outcome {
+        case .success(let found):
+            resolved = found
+        case .failure(let error):
+            // Nothing yt-dlp understands, but the browser saw a plain media file: download it directly
+            // with the multi-connection engine (spec §8.3.3).
+            if let file = query.streams.first(where: { $0.kind == .file }) {
+                return directFileQuery(file, query: query, headers: headers, id: id)
             }
-            info = try? await YTDLPRunner.query(pageURL: stream.url, headers: headers, tools: tools)
+            return IPCResponse(id: id, ok: false, error: Self.message(for: error))
         }
-        guard let info else {
-            return IPCResponse(id: id, ok: false, error: String(localized: "This page has no downloadable video."))
-        }
-        let video = FormatMapper.videoInfo(from: info, preferQuickTimeCompatible: model.settings.settings.preferQuickTimeCompatible)
+        let info = resolved.info
+        var video = FormatMapper.videoInfo(from: info, preferQuickTimeCompatible: model.settings.settings.preferQuickTimeCompatible)
+        video.title = MediaResolver.displayTitle(ytDLPTitle: video.title, pageTitle: query.title)
         guard !video.options.isEmpty else {
             return IPCResponse(id: id, ok: false, error: String(localized: "No downloadable formats were found for this video."))
         }
         let queryId = UUID().uuidString
-        let sourceURL = query.pageUrl
-        queries[queryId] = MediaQueryEntry(sourceURL: sourceURL, headers: headers, title: video.title, options: video.options)
+        queries[queryId] = MediaQueryEntry(sourceURL: resolved.candidate.url, headers: resolved.candidate.headers,
+                                           title: video.title, options: video.options)
         queryDates[queryId] = Date()
         let formats = video.options.map {
             MediaQueryOut.Format(id: $0.label, label: $0.label, ext: $0.ext, approxSize: $0.approxSize, note: $0.note)
         }
         return IPCResponse(id: id, mediaQuery: MediaQueryOut(queryId: queryId, title: video.title, formats: formats))
+    }
+
+    private func directFileQuery(_ file: MediaQueryIn.Stream, query: MediaQueryIn, headers: [String: String],
+                                 id: String) -> IPCResponse {
+        var headers = headers
+        if let frame = file.frameUrl ?? query.referrer { headers["Referer"] = frame.absoluteString }
+        let name = FilenameResolver.resolve(suggested: query.title.map { title in
+            let ext = file.url.pathExtension.lowercased()
+            return ext.isEmpty || ext == "bin" ? title + ".mp4" : title + "." + ext
+        }, url: file.url)
+        let ext = (name as NSString).pathExtension.uppercased()
+        let queryId = UUID().uuidString
+        queries[queryId] = MediaQueryEntry(
+            sourceURL: file.url, headers: headers, title: FilenameResolver.sanitize(name),
+            options: [MediaFormatOption(label: "Original", selector: "", ext: ext.lowercased(), audioOnly: false, height: nil)])
+        queryDates[queryId] = Date()
+        let format = MediaQueryOut.Format(id: "Original", label: String(localized: "Original"), ext: ext, approxSize: nil, note: nil)
+        return IPCResponse(id: id, mediaQuery: MediaQueryOut(queryId: queryId, title: query.title ?? name, formats: [format]))
+    }
+
+    /// The user-facing reason, so the panel shows why instead of a generic "no video".
+    private static func message(for error: MediaQueryError) -> String {
+        switch error {
+        case .unsupportedURL: String(localized: "This page has no downloadable video.")
+        case .timedOut: String(localized: "Getting the video information timed out. Try again.")
+        case .ytDLPNotFound: String(localized: "yt-dlp is not installed. Install it with: brew install yt-dlp")
+        case .failed(let detail): "yt-dlp: " + detail
+        }
     }
 
     private func mediaDownload(_ download: MediaDownloadIn, id: String) -> IPCResponse {

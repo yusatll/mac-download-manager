@@ -265,12 +265,32 @@ public struct MediaQueryIn: Codable, Equatable, Sendable {
         public var url: URL
         public var kind: Kind
         public var mime: String?
+        /// The frame that loaded the stream (used as Referer/Origin).
+        public var frameUrl: URL?
 
-        public init(url: URL, kind: Kind, mime: String? = nil) {
+        public init(url: URL, kind: Kind, mime: String? = nil, frameUrl: URL? = nil) {
             self.url = url
             self.kind = kind
             self.mime = mime
+            self.frameUrl = frameUrl
         }
+
+        /// Only http(s) streams are accepted (spec §10).
+        public init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            url = try DownloadIn.httpURL(c, CodingKeys.url)
+            kind = try c.decode(Kind.self, forKey: .kind)
+            mime = try c.decodeIfPresent(String.self, forKey: .mime)
+            frameUrl = (try? DownloadIn.httpURL(c, CodingKeys.frameUrl)) ?? nil
+        }
+
+        enum CodingKeys: String, CodingKey { case url, kind, mime, frameUrl }
+    }
+
+    /// Decodes an array element by element, dropping the ones that fail validation.
+    private struct Lossy<T: Decodable>: Decodable {
+        let value: T?
+        init(from decoder: Decoder) throws { value = try? T(from: decoder) }
     }
 
     public var pageUrl: URL
@@ -279,12 +299,15 @@ public struct MediaQueryIn: Codable, Equatable, Sendable {
     public var cookies: String?
     public var userAgent: String?
     public var referrer: URL?
+    /// Embedded player pages (Wistia, Vimeo …) that yt-dlp can resolve on their own.
+    public var embeds: [URL]
 
     public init(pageUrl: URL, title: String? = nil, streams: [Stream] = [], cookies: String? = nil,
-                userAgent: String? = nil, referrer: URL? = nil) {
+                userAgent: String? = nil, referrer: URL? = nil, embeds: [URL] = []) {
         self.pageUrl = pageUrl
         self.title = title
         self.streams = streams
+        self.embeds = embeds
         self.cookies = cookies
         self.userAgent = userAgent
         self.referrer = referrer
@@ -295,13 +318,16 @@ public struct MediaQueryIn: Codable, Equatable, Sendable {
         pageUrl = (try? DownloadIn.httpURL(c, CodingKeys.pageUrl))
             ?? URL(string: "https://invalid.invalid")!
         title = try c.decodeIfPresent(String.self, forKey: .title)
-        streams = try c.decodeIfPresent([Stream].self, forKey: .streams) ?? []
+        streams = (try c.decodeIfPresent([Lossy<Stream>].self, forKey: .streams) ?? []).compactMap(\.value)
         cookies = try c.decodeIfPresent(String.self, forKey: .cookies)
         userAgent = try c.decodeIfPresent(String.self, forKey: .userAgent)
         referrer = (try? DownloadIn.httpURL(c, CodingKeys.referrer)) ?? nil
+        embeds = (try c.decodeIfPresent([String].self, forKey: .embeds) ?? [])
+            .compactMap { URL(string: $0) }
+            .filter { ["http", "https"].contains($0.scheme?.lowercased() ?? "") && $0.host() != nil }
     }
 
-    enum CodingKeys: String, CodingKey { case pageUrl, title, streams, cookies, userAgent, referrer }
+    enum CodingKeys: String, CodingKey { case pageUrl, title, streams, cookies, userAgent, referrer, embeds }
 }
 
 public struct MediaQueryOut: Codable, Equatable, Sendable {

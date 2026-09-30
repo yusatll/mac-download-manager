@@ -124,6 +124,79 @@
     return null;
   }
 
+  const SEGMENT_MIMES = /^(video\/mp2t|video\/iso\.segment|audio\/iso\.segment)/i;
+
+  /**
+   * Like classifyMediaUrl, but also trusts the response Content-Type, so extensionless streams
+   * (…/master, Wistia's …/deliveries/x.bin) are found the way IDM finds them (spec §8.1).
+   */
+  function classifyMedia(url, mime) {
+    const path = pathOf(url);
+    if (/\.(ts|m4s)(\?|$)/i.test(path) || /\/seg-?\d|\/range\//i.test(path)) return null;
+    const byUrl = classifyMediaUrl(url);
+    if (byUrl) return byUrl;
+    const type = String(mime || '').toLowerCase().split(';')[0].trim();
+    if (!type || SEGMENT_MIMES.test(type)) return null;
+    if (type.includes('mpegurl')) return 'hls';
+    if (type === 'application/dash+xml') return 'dash';
+    if (type.startsWith('video/') || type.startsWith('audio/')) return 'file';
+    return null;
+  }
+
+  const PLAYER_EMBED = [
+    /^https:\/\/fast\.wistia\.(net|com)\/embed\/(iframe|medias)\//i,
+    /^https:\/\/([a-z0-9-]+\.)?wistia\.com\/(embed|medias)\//i,
+    /^https:\/\/player\.vimeo\.com\/video\//i,
+    /^https:\/\/(www\.)?(youtube|youtube-nocookie)\.com\/embed\//i,
+    /^https:\/\/iframe\.mediadelivery\.net\/embed\//i,
+    /^https:\/\/players\.brightcove\.net\//i,
+    /^https:\/\/cdn\.jwplayer\.com\/players\//i,
+    /^https:\/\/(www\.)?dailymotion\.com\/embed\//i,
+    /^https:\/\/fast\.vidyard\.com\//i,
+    /^https:\/\/play\.vidyard\.com\//i,
+  ];
+
+  /**
+   * Player pages embedded in the current page that yt-dlp can resolve on their own. Wistia's
+   * JS embed (used by Kajabi) has no iframe, only a `wistia_async_<id>` class.
+   */
+  function embedCandidates({ iframeSrcs = [], classNames = [], scriptSrcs = [] } = {}) {
+    const out = [];
+    const add = (url) => { if (!out.includes(url)) out.push(url); };
+    for (const src of scriptSrcs) {
+      const match = /^https:\/\/fast\.wistia\.(?:com|net)\/embed\/medias\/([a-z0-9]{10})\.jsonp/i.exec(String(src));
+      if (match) add(`https://fast.wistia.net/embed/iframe/${match[1].toLowerCase()}`);
+    }
+    for (const names of classNames) {
+      const match = /(?:^|\s)wistia_async_([a-z0-9]{10})(?:\s|$)/i.exec(String(names));
+      if (match) add(`https://fast.wistia.net/embed/iframe/${match[1].toLowerCase()}`);
+    }
+    for (const src of iframeSrcs) {
+      if (PLAYER_EMBED.some((pattern) => pattern.test(String(src)))) add(String(src));
+    }
+    return out;
+  }
+
+  /** Streams seen in this frame plus everything the background recorded for the tab (all frames, webRequest). */
+  function mergeStreams(frameStreams = [], tabStreams = []) {
+    const byUrl = new Map();
+    for (const stream of [...frameStreams, ...tabStreams]) {
+      if (!stream || !isHttpUrl(stream.url)) continue;
+      if (/\.(ts|m4s)(\?|$)/i.test(pathOf(stream.url))) continue;   // segments, whatever their kind
+      const kind = stream.kind || classifyMedia(stream.url, stream.mime);
+      if (!kind) continue;
+      const existing = byUrl.get(stream.url);
+      if (existing) {
+        if (!existing.frameUrl && stream.frameUrl) existing.frameUrl = stream.frameUrl;
+        continue;
+      }
+      const entry = { url: stream.url, kind, mime: stream.mime || '' };
+      if (stream.frameUrl) entry.frameUrl = stream.frameUrl;
+      byUrl.set(stream.url, entry);
+    }
+    return Array.from(byUrl.values());
+  }
+
   function randomId() {
     const crypto_ = root.crypto;
     if (crypto_ && crypto_.getRandomValues) {
@@ -191,7 +264,7 @@
   root.HDM = {
     EXTENSION_VERSION, NATIVE_HOST, DEFAULT_SETTINGS,
     isHttpUrl, hostOf, pathOf, extensionOf, extensionFromMime,
-    matchesException, shouldCapture, classifyMediaUrl,
+    matchesException, shouldCapture, classifyMediaUrl, classifyMedia, embedCandidates, mergeStreams,
     makeMessage, randomId, t, locale,
   };
 })(typeof globalThis !== 'undefined' ? globalThis : self);

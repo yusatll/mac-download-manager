@@ -93,3 +93,62 @@ test('i18n switches with the navigator language', () => {
   assert.equal(english.HDM.t('downloadThisVideo'), 'Download this video');
   assert.equal(english.HDM.t('nonexistent-key'), 'nonexistent-key');
 });
+
+test('classifyMedia uses the Content-Type when the URL has no telling extension', () => {
+  const HDM = loadHDM();
+  assert.equal(HDM.classifyMedia('https://embed-ssl.wistia.com/deliveries/abc.bin', 'video/mp4'), 'file', 'Wistia serves mp4 as .bin');
+  assert.equal(HDM.classifyMedia('https://cdn.e.com/master', 'application/vnd.apple.mpegurl'), 'hls');
+  assert.equal(HDM.classifyMedia('https://cdn.e.com/master', 'application/x-mpegURL; charset=utf-8'), 'hls');
+  assert.equal(HDM.classifyMedia('https://cdn.e.com/manifest', 'application/dash+xml'), 'dash');
+  assert.equal(HDM.classifyMedia('https://cdn.e.com/seg1', 'video/mp2t'), null, 'HLS segments are never listed');
+  assert.equal(HDM.classifyMedia('https://cdn.e.com/chunk', 'video/iso.segment'), null);
+  assert.equal(HDM.classifyMedia('https://cdn.e.com/page', 'text/html'), null);
+  assert.equal(HDM.classifyMedia('https://cdn.e.com/a.m3u8', ''), 'hls', 'extension still works without a mime');
+  assert.equal(HDM.classifyMedia('https://cdn.e.com/a.ts', 'video/mp4'), null, 'segment extension wins');
+});
+
+test('embedCandidates finds player pages yt-dlp can resolve (Wistia, Vimeo, YouTube …)', () => {
+  const HDM = loadHDM();
+  const found = HDM.embedCandidates({
+    iframeSrcs: [
+      'https://fast.wistia.net/embed/iframe/abc123defg?videoFoam=true',
+      'https://player.vimeo.com/video/76979871?h=xyz',
+      'https://www.youtube.com/embed/dQw4w9WgXcQ',
+      'https://ads.example.com/banner',
+      'about:blank',
+    ],
+    classNames: ['wistia_embed wistia_async_m3m3xookbb videoFoam=true', 'kjb-video-responsive'],
+  });
+  assert.deepEqual(found, [
+    'https://fast.wistia.net/embed/iframe/m3m3xookbb',
+    'https://fast.wistia.net/embed/iframe/abc123defg?videoFoam=true',
+    'https://player.vimeo.com/video/76979871?h=xyz',
+    'https://www.youtube.com/embed/dQw4w9WgXcQ',
+  ]);
+});
+
+test('mergeStreams combines the frame list with the tab list, keeping the first frame URL', () => {
+  const HDM = loadHDM();
+  const merged = HDM.mergeStreams(
+    [{ url: 'https://e.com/a.m3u8', mime: '' }],
+    [{ url: 'https://e.com/a.m3u8', kind: 'hls', frameUrl: 'https://player.e.com/embed' },
+     { url: 'https://w.com/d.bin', kind: 'file', mime: 'video/mp4', frameUrl: 'https://fast.wistia.net/embed/iframe/x' },
+     { url: 'https://e.com/seg.ts', kind: 'file' }]);
+  assert.deepEqual(merged, [
+    { url: 'https://e.com/a.m3u8', kind: 'hls', mime: '', frameUrl: 'https://player.e.com/embed' },
+    { url: 'https://w.com/d.bin', kind: 'file', mime: 'video/mp4', frameUrl: 'https://fast.wistia.net/embed/iframe/x' },
+  ]);
+});
+
+test('embedCandidates also reads Wistia media ids from its JSONP script tags', () => {
+  const HDM = loadHDM();
+  const found = HDM.embedCandidates({
+    scriptSrcs: ['https://fast.wistia.com/embed/medias/m3m3xookbb.jsonp', 'https://fast.wistia.com/assets/external/E-v1.js'],
+  });
+  assert.deepEqual(found, ['https://fast.wistia.net/embed/iframe/m3m3xookbb']);
+  const twice = HDM.embedCandidates({
+    scriptSrcs: ['https://fast.wistia.com/embed/medias/m3m3xookbb.jsonp'],
+    classNames: ['wistia_embed wistia_async_m3m3xookbb'],
+  });
+  assert.deepEqual(twice, ['https://fast.wistia.net/embed/iframe/m3m3xookbb'], 'same video found twice is listed once');
+});
